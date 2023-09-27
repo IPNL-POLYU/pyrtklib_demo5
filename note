@@ -1,0 +1,6 @@
+rtmcmn.c:3878 WIN_DLL -> DLL
+rtklib.h:521  remove win32 define -> 
+			typedef struct {        /* time struct */
+			    time_t time;        /* time (s) expressed by standard time_t */
+			    double sec;         /* fraction of second under 1 s */
+			} gtime_t;
