@@ -707,7 +707,7 @@ extern int lambda_search(int n, int m,Arr1D<double> Sa,Arr1D<double> SQ,Arr1D<do
     auto tmp = lambda_search(n, m, a, Q, F, s);
     return tmp;
 }
-extern int pntpos(const obsd_t *obs, int n, const nav_t *nav, const prcopt_t *opt, sol_t *sol,Arr1D<double> Sazel, ssat_t *ssat,Arr1D<char> Smsg){
+extern int pntpos(obsd_t *obs, int n, const nav_t *nav, const prcopt_t *opt, sol_t *sol,Arr1D<double> Sazel, ssat_t *ssat,Arr1D<char> Smsg){
     double *azel = Sazel.src;
     char *msg = Smsg.src;
     auto tmp = pntpos(obs, n, nav, opt, sol, azel, ssat, msg);
@@ -1374,6 +1374,7 @@ PYBIND11_MODULE(pyrtklib, m) {
         .def_property_readonly("L",[](obsd_t& o) {Arr1D<double>* tmp = new Arr1D<double>(o.L,NFREQ+NEXOBS);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("P",[](obsd_t& o) {Arr1D<double>* tmp = new Arr1D<double>(o.P,NFREQ+NEXOBS);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("D",[](obsd_t& o) {Arr1D<float>* tmp = new Arr1D<float>(o.D,NFREQ+NEXOBS);return tmp;},py::return_value_policy::reference)
+        .def_property_readonly("CP",[](obsd_t& o) {Arr1D<double>* tmp = new Arr1D<double>(o.CP,4);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("ptr",[](obsd_t& o){return &o;},py::return_value_policy::reference);
 
     py::class_<obs_t>(m,"obs_t").def(py::init())
@@ -2400,7 +2401,7 @@ PYBIND11_MODULE(pyrtklib, m) {
     m.def("lambda",static_cast<int(*)(int n, int m,Arr1D<double> Sa,Arr1D<double> SQ,Arr1D<double> SF,Arr1D<double> Ss)>(&lambda),"rtklib lambda");
     m.def("lambda_reduction",static_cast<int(*)(int n,Arr1D<double> SQ,Arr1D<double> SZ)>(&lambda_reduction),"rtklib lambda_reduction");
     m.def("lambda_search",static_cast<int(*)(int n, int m,Arr1D<double> Sa,Arr1D<double> SQ,Arr1D<double> SF,Arr1D<double> Ss)>(&lambda_search),"rtklib lambda_search");
-    m.def("pntpos",static_cast<int(*)(const obsd_t *obs, int n, const nav_t *nav, const prcopt_t *opt, sol_t *sol,Arr1D<double> Sazel, ssat_t *ssat,Arr1D<char> Smsg)>(&pntpos),"rtklib pntpos");
+    m.def("pntpos",static_cast<int(*)(obsd_t *obs, int n, const nav_t *nav, const prcopt_t *opt, sol_t *sol,Arr1D<double> Sazel, ssat_t *ssat,Arr1D<char> Smsg)>(&pntpos),"rtklib pntpos");
     m.def("rtkoutstat",static_cast<int(*)(rtk_t *rtk,Arr1D<char> Sbuff)>(&rtkoutstat),"rtklib rtkoutstat");
     m.def("pppoutstat",static_cast<int(*)(rtk_t *rtk,Arr1D<char> Sbuff)>(&pppoutstat),"rtklib pppoutstat");
     m.def("ppp_ar",static_cast<int(*)(rtk_t *rtk, const obsd_t *obs, int n,Arr1D<int> Sexc, const nav_t *nav,Arr1D<double> Sazel,Arr1D<double> Sx,Arr1D<double> SP)>(&ppp_ar),"rtklib ppp_ar");

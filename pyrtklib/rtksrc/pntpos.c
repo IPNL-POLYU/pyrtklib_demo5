@@ -196,7 +196,7 @@ extern int tropcorr(gtime_t time, const nav_t *nav, const double *pos,
     return 1;
 }
 /* pseudorange residuals -----------------------------------------------------*/
-static int rescode(int iter, const obsd_t *obs, int n, const double *rs,
+static int rescode(int iter, obsd_t *obs, int n, const double *rs,
                    const double *dts, const double *vare, const int *svh,
                    const nav_t *nav, const double *x, const prcopt_t *opt,
                    double *v, double *H, double *var, double *azel, int *vsat,
@@ -248,6 +248,10 @@ static int rescode(int iter, const obsd_t *obs, int n, const double *rs,
         }
         /* pseudorange residual */
         v[nv]=P-(r+dtr-CLIGHT*dts[i*2]+dion+dtrp);
+        obs[i].CP[0] = P;
+        obs[i].CP[1] = dion;
+        obs[i].CP[2] = dtrp;
+        obs[i].CP[3] = -CLIGHT*dts[i*2];
         
         /* design matrix */
         for (j=0;j<NX;j++) H[j+nv*NX]=j<3?-e[j]:(j==3?1.0:0.0);
@@ -306,7 +310,7 @@ static int valsol(const double *azel, const int *vsat, int n,
     return 1;
 }
 /* estimate receiver position ------------------------------------------------*/
-static int estpos(const obsd_t *obs, int n, const double *rs, const double *dts,
+static int estpos(obsd_t *obs, int n, const double *rs, const double *dts,
                   const double *vare, const int *svh, const nav_t *nav,
                   const prcopt_t *opt, sol_t *sol, double *azel, int *vsat,
                   double *resp, char *msg)
@@ -536,7 +540,7 @@ static void estvel(const obsd_t *obs, int n, const double *rs, const double *dts
 *          receiver bias are negligible (only involving glonass-gps time offset
 *          and receiver bias)
 *-----------------------------------------------------------------------------*/
-extern int pntpos(const obsd_t *obs, int n, const nav_t *nav,
+extern int pntpos(obsd_t *obs, int n, const nav_t *nav,
                   const prcopt_t *opt, sol_t *sol, double *azel, ssat_t *ssat,
                   char *msg)
 {
