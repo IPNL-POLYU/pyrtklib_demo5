@@ -4,9 +4,9 @@ This is a Python binding for [RTKLIB](https://github.com/rtklibexplorer/RTKLIB) 
 
 If you want to use the tool based on original RTKLIB version, please refer to [pyrtklib](https://github.com/IPNL-POLYU/pyrtklib)
 
-If you want to use the rtklib deeply, please refer to the [point position example](https://github.com/IPNL-POLYU/pyrtklib_demo5/blob/main/example_pntpos.py).
+If you want to use the rtklib deeply, please refer to the [point position example](https://github.com/IPNL-POLYU/pyrtklib_demo5/blob/master/example_pntpos.py).
 
-If you just need the result, please refer to the [post position example](https://github.com/IPNL-POLYU/pyrtklib_demo5/blob/main/example_postpos.py).
+If you just need the result, please refer to the [post position example](https://github.com/IPNL-POLYU/pyrtklib_demo5/blob/master/example_postpos.py).
 <table>
 <tr sytle="font-size:10px">
 <td width='50%' style="vertical-align:top;">
