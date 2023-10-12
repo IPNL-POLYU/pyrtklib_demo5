@@ -1,3 +1,5 @@
+export CC=/usr/local/bin/gcc-12
+export CXX=/usr/local/bin/g++-12
 rtmcmn.c:3878 WIN_DLL -> DLL
 rtklib.h:521  remove win32 define -> 
 			typedef struct {        /* time struct */

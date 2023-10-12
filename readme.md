@@ -1,22 +1,23 @@
-# PyRTKLIB
-# PyRTKLIB is a bridge between AI and GNSS.
-Deep learning has reached the state-of-the-art in many fields, including 
+# PyRTKLIB -- A bridge between AI and GNSS.
 ## Introduction
-This is a Python binding for [RTKLIB](https://github.com/tomojitakasu/RTKLIB), the most popular GNSS-RTK positioning C library. However, many researchers are currently using Python for research, especially in deep learning field. Thus, we implement this Python interface of RTKLIB to build a bridge between Python and positioning. By means of RTKLIB, you can easily read data from rinex file and process the positioning using the methods provided by RTKLIB, such as SPP, RTK, PPP.
+This is a Python binding for [RTKLIB](https://github.com/rtklibexplorer/RTKLIB) from [rtklibexplorer](https://github.com/rtklibexplorer) , which provides more satellites support compared to the original version. Many researchers are currently using Python for research, especially in deep learning field. Thus, we implement this Python interface of RTKLIB to build a bridge between Python and positioning. By means of RTKLIB, you can easily read data from rinex file and process the positioning using the methods provided by RTKLIB, such as SPP, RTK, PPP.
+If you want to use the tool based on original RTKLIB version, please refer to [pyrtklib](https://github.com/IPNL-POLYU/pyrtklib)
 <table>
-<tr>
-<td>
+<tr sytle="font-size:10px">
+<td width='50%' style="vertical-align:top;">
 
-```python
-# Python code for Hello World
-print("Hello, World!")
+![Python Code](https://github.com/IPNL-POLYU/pyrtklib/blob/main/image/rtkpy.png?raw=true)
+
 </td>
-<td>
-// JavaScript code for Hello World
-console.log("Hello, World!");
+<td width='50%' style="vertical-align:top;">
+
+![C Code](https://github.com/IPNL-POLYU/pyrtklib/blob/main/image/rtkc.png?raw=true)
+
 </td>
 </tr>
 </table>
+
+
 
 ## Installation
 Installation of pyrtklib is very easy, just clone the code and install it.
@@ -26,11 +27,18 @@ Installation of pyrtklib is very easy, just clone the code and install it.
     We don't provide pre-compiled package so far, thus, this library will be compiled in time. (Looking forward one day it can be directly installed by pip!) It requires several dependencies, including gcc and cmake. If you are using on a MacOS, please first install gcc by brew and set the compiler path, because RTKLIB used GNU C features, which is hard to solve in clang. MSVC is not tested.
 1. Clone from github
 ```shell
-git clone git@github.com:IPNL-POLYU/pyrtklib.git
+git clone git@github.com:IPNL-POLYU/pyrtklib_demo5.git
 ```
 2. Install
 ```shell
-cd pyrtklib
+cd pyrtklib_demo5
+python3 setup.py install
+```
+If you are using macos, plase set the default compiler to GNU gcc and g++.
+```shell
+export CC=/usr/local/bin/gcc-12
+export CXX=/usr/local/bin/g++-12
+cd pyrtklib_demo5
 python3 setup.py install
 ```
 Then you can use this lib by importing it.
