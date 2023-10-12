@@ -1,12 +1,18 @@
 from pyrtklib import *
 
+def str2char(str):
+    ret = Arr1Dchar(len(str))
+    for i in range(len(str)):
+        ret[i] = str[i]
+    return ret
+
 if __name__ == "__main__":
     gnss_file_list = []
     gnss_file_list.append("data/20210714.2.whampoa.ublox.f9p.obs")
     gnss_file_list.append("data/hksc1950.21f")
     gnss_file_list.append("data/hksc1950.21n")
     gnss_file_list.append("data/hksc1950.21o")
-    output_path = "pyexample_output.txt"
+    output_path = str2char("pyexample_output.txt")
 
     trace_lv = 3
     stat_lv = 3
@@ -77,3 +83,4 @@ if __name__ == "__main__":
     print('starting rtklib ...')
     ret = postpos(ts,te,tint,0.0,prcopt,solopt,filopt,gnss_file_list,n,output_path,rov,base)
     print("rtklib status: %d",ret)
+
