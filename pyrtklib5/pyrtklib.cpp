@@ -859,7 +859,7 @@ extern int lexioncorr(gtime_t time, const nav_t *nav,Arr1D<double> Spos,Arr1D<do
     auto tmp = lexioncorr(time, nav, pos, azel, delay, var);
     return tmp;
 }
-PYBIND11_MODULE(pyrtklib, m) {
+PYBIND11_MODULE(pyrtklib5, m) {
     m.doc() = "rtklib python interface by pybind11";
 	m.attr("NULL") = __null;
     m.attr("PI")=3.1415926535897932;
