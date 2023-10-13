@@ -1,4 +1,4 @@
-from pyrtklib import *
+from pyrtklib5 import *
 
 def str2char(str):
     ret = Arr1Dchar(len(str))

@@ -1,4 +1,4 @@
-from pyrtklib import *
+from pyrtklib5 import *
 import pandas as pd
 import numpy as np
 
