@@ -24,6 +24,16 @@ If you just need the result, please refer to the [post position example](https:/
 <table>
 <tr sytle="font-size:10px">
 <td width='50%' style="vertical-align:top;">
+![Python Code](https://github.com/IPNL-POLYU/pyrtklib/blob/main/image/rtkpy.png?raw=true)
+
+</td>
+<td width='50%' style="vertical-align:top;">
+
+![C Code](https://github.com/IPNL-POLYU/pyrtklib/blob/main/image/rtkc.png?raw=true)
+
+</td>
+</tr>
+</table>
 
 ## Installation
 
