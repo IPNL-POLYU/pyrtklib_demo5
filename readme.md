@@ -15,6 +15,12 @@ Update the base rtklib version to demo5 b34h
   * update_cmr
   * input_cnav
   * input_tersus
+* And these files are deleted
+  * delete pyrtklib5/rtksrc/ppp_corr.c
+  * delete pyrtklib5/rtksrc/qzslex.c
+  * delete pyrtklib5/rtksrc/rcv/cmr.c
+  * delete pyrtklib5/rtksrc/rcv/gw10.c
+  * delete pyrtklib5/rtksrc/rcv/rcvlex.c
 
 ### 2023.11.05 v0.2.3 Bug fix and code optimization
 
