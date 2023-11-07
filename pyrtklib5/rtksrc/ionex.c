@@ -7,7 +7,7 @@
 *     [1] S.Schear, W.Gurtner and J.Feltens, IONEX: The IONosphere Map EXchange
 *         Format Version 1, February 25, 1998
 *     [2] S.Schaer, R.Markus, B.Gerhard and A.S.Timon, Daily Global Ionosphere
-*         Maps based on GPS Carrier Phase Data Routinely producted by CODE
+*         Maps based on GPS Carrier Phase Data Routinely produced by CODE
 *         Analysis Center, Proceeding of the IGS Analysis Center Workshop, 1996
 *
 * version : $Revision:$ $Date:$
@@ -17,8 +17,6 @@
 *           2014/02/22 1.2 fix problem on compiled as C++
 *-----------------------------------------------------------------------------*/
 #include "rtklib.h"
-
-static const char rcsid[]="$Id:$";
 
 #define SQR(x)      ((x)*(x))
 #define VAR_NOTEC   SQR(30.0)   /* variance of no tec */
@@ -50,45 +48,51 @@ static tec_t *addtec(const double *lats, const double *lons, const double *hgts,
 {
     tec_t *p,*nav_tec;
     gtime_t time0={0};
-    int i,n,ndata[3];
+    int i,n,ndata[3],indx;
     
     trace(3,"addtec  :\n");
     
     ndata[0]=nitem(lats);
     ndata[1]=nitem(lons);
     ndata[2]=nitem(hgts);
-    if (ndata[0]<=1||ndata[1]<=1||ndata[2]<=0) return NULL;
-    
-    if (nav->nt>=nav->ntmax) {
-        nav->ntmax+=256;
-        if (!(nav_tec=(tec_t *)realloc(nav->tec,sizeof(tec_t)*nav->ntmax))) {
-            trace(1,"readionex malloc error ntmax=%d\n",nav->ntmax);
-            free(nav->tec); nav->tec=NULL; nav->nt=nav->ntmax=0;
+    if (ndata[0] > 1 && ndata[1] > 1 && ndata[2] > 0)
+    {
+        if (nav->nt >= nav->ntmax) {
+            nav->ntmax += 256;
+            if (!(nav_tec = (tec_t*)realloc(nav->tec, sizeof(tec_t) * nav->ntmax))) {
+                trace(1, "readionex malloc error ntmax=%d\n", nav->ntmax);
+                free(nav->tec); nav->tec = NULL; nav->nt = nav->ntmax = 0;
+                return NULL;
+            }
+            for (indx = nav->ntmax - 1; indx >= nav->ntmax - 256; indx--)
+                memset(&nav_tec[indx], 0, sizeof(tec_t));
+            nav->tec = nav_tec;
+        }
+        p = nav->tec + nav->nt;
+        p->time = time0;
+        p->rb = rb;
+        for (i = 0; i < 3; i++) {
+            p->ndata[i] = ndata[i];
+            p->lats[i] = lats[i];
+            p->lons[i] = lons[i];
+            p->hgts[i] = hgts[i];
+        }
+        n = ndata[0] * ndata[1] * ndata[2];
+
+        if (!(p->data = (double*)malloc(sizeof(double) * n)) ||
+            !(p->rms = (float*)malloc(sizeof(float) * n))) {
             return NULL;
         }
-        nav->tec=nav_tec;
+        for (i = 0; i < n; i++) {
+            /* Thanks to 'if (ndata[0]>1 && ndata[1]>1 && ndata[2]>0)' we know analysis is wrong - disable 6386 */
+            p->data[i] = 0.0;
+            p->rms[i] = 0.0f;
+        }
+        nav->nt++;
+        return p;
     }
-    p=nav->tec+nav->nt;
-    p->time=time0;
-    p->rb=rb;
-    for (i=0;i<3;i++) {
-        p->ndata[i]=ndata[i];
-        p->lats[i]=lats[i];
-        p->lons[i]=lons[i];
-        p->hgts[i]=hgts[i];
-    }
-    n=ndata[0]*ndata[1]*ndata[2];
-    
-    if (!(p->data=(double *)malloc(sizeof(double)*n))||
-        !(p->rms =(float  *)malloc(sizeof(float )*n))) {
+    else
         return NULL;
-    }
-    for (i=0;i<n;i++) {
-        p->data[i]=0.0;
-        p->rms [i]=0.0f;
-    }
-    nav->nt++;
-    return p;
 }
 /* read ionex dcb aux data ----------------------------------------------------*/
 static void readionexdcb(FILE *fp, double *dcb, double *rms)
@@ -320,10 +324,10 @@ extern void readtec(const char *file, nav_t *nav, int opt)
     /* combine tec grid data */
     if (nav->nt>0) combtec(nav);
     
-    /* P1-P2 dcb */
-    for (i=0;i<MAXSAT;i++) {
-        nav->cbias[i][0]=CLIGHT*dcb[i]*1E-9; /* ns->m */
-    }
+    /* P1-P2 dcb (not used)*/
+    /* for (i=0;i<MAXSAT;i++) { */
+    /*    nav->cbias[i][0]=CLIGHT*dcb[i]*1E-9; */ /* ns->m */
+    /* } */
 }
 /* interpolate tec grid data -------------------------------------------------*/
 static int interptec(const tec_t *tec, int k, const double *posp, double *value,
@@ -376,7 +380,7 @@ static int interptec(const tec_t *tec, int k, const double *posp, double *value,
 static int iondelay(gtime_t time, const tec_t *tec, const double *pos,
                     const double *azel, int opt, double *delay, double *var)
 {
-    const double fact=40.30E16/FREQ1/FREQ1; /* tecu->L1 iono (m) */
+    const double fact=40.30E16/FREQL1/FREQL1; /* tecu->L1 iono (m) */
     double fs,posp[3]={0},vtec,rms,hion,rp;
     int i;
     

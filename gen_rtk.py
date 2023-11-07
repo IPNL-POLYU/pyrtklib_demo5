@@ -73,7 +73,8 @@ std::map<void*,void*> gmap;
 footer = '''
 }
 '''
-bindTemp = '    BINDARR1D(%s);\n    BINDARR2D(%s);\n'
+#bindTemp = '    BINDARR1D(%s);\n    BINDARR2D(%s);\n'
+bindTemp = '    bindArr1D<%s>(m,"%s");\n    bindArr2D<%s>(m,"%s");\n'
 structTemp = '    py::class_<%s>(m,"%s").def(py::init())\n'
 structMemTemp = '        .def_readwrite("%s",&%s::%s)\n'
 structProperTemp = '''        .def_property_readonly("%s",[](%s& o) {%s* tmp = new %s(%s);return tmp;},py::return_value_policy::reference)\n'''
@@ -102,12 +103,17 @@ def gen_struct(struct):
 	for i in struct['proper']:
 		dim = []
 		if len(i['dims']) == 1:
-			if i['dims'][0] == '':
+			if i['dims'][0] == '*':
 				dim.append('-1')
+				ttype = 'Arr1D'+'<'+i['type']+'>'
+				temp += '''        .def_property("%s",[](%s& o) {%s* tmp = new %s(%s);return tmp;},[](%s& o,Arr1D<%s>arr){o.%s=arr.src;},py::return_value_policy::reference)\n'''%(i['name'],name,ttype,ttype,"o."+i['name']+',-1',name,i['type'],i['name'])
 			else:
-				dim.append(i['dims'][0])
-			ttype = 'Arr1D'+'<'+i['type']+'>'
-			temp += structProperTemp%(i['name'],name,ttype,ttype,"o."+i['name']+','+dim[0])
+				if i['dims'][0] == '':
+					dim.append('-1')
+				else:
+					dim.append(i['dims'][0])
+				ttype = 'Arr1D'+'<'+i['type']+'>'
+				temp += structProperTemp%(i['name'],name,ttype,ttype,"o."+i['name']+','+dim[0])
 		else:
 			if i['dims'][0] == '':
 				dim.append('-1')
@@ -160,6 +166,8 @@ def gen_multidef(funcs):
 			tmp += "    %s **%s = convertType(D%s);\n"%(j[0],j[1],j[1])
 	for j in i['sconvert']:
 		tmp += "    %s *%s = S%s.src;\n"%(j[0],j[1],j[1])
+	if i['fconvert']:
+		tmp += '	FILE *fp = fopen(Ffp,mode);\n'
 	params = re.findall("\(.*\)",i['src'])[0].lstrip('(').rstrip(')')
 	params = params.split(',')
 	p = []
@@ -170,11 +178,15 @@ def gen_multidef(funcs):
 		tmp += "    auto tmp = %s(%s);\n"%(i['name'],params)
 		for j in i['dconvert']:
 			tmp += '    free(%s);\n'%j[1]
+		if i['fconvert']:
+			tmp += '	fclose(fp);\n'
 		tmp += "    return tmp;\n}\n"
 	else:
 		tmp += "    %s(%s);\n"%(i['name'],params)
 		for j in i['dconvert']:
 			tmp += '    free(%s);\n'%j[1]
+		if i['fconvert']:
+			tmp += '	fclose(fp);\n'
 		tmp += "\n}\n"
 	return tmp
 
@@ -193,21 +205,21 @@ def gen_defs(defs):
 
 DEFINE = ['ENACMP','ENAGAL','ENAGLO','ENAQZS','ENAIRN']
 #parse the header
-with open('pyrtklib/rtksrc/rtklib.h','r') as f:
+with open('pyrtklib5/rtksrc/rtklib.h','r') as f:
 	src = f.read()
 defines = getDefine(src,DEFINE)
-defines.append(['VER_RTKLIB','"2.4.3 demo5"'])
-defines.append(['PATCH_LEVEL','"b26b"'])
+defines.append(['VER_RTKLIB','"demo5"'])
+defines.append(['PATCH_LEVEL','"b34h"'])
 src = remover(src)
 rec = re.compile('extern "C" {(.*)}',re.DOTALL)
 src = rec.findall(src)[0]
-src = src.replace('"Copyright (C) 2007-2016 T.Takasu\\n',"")
+src = src.replace('"Copyright (C) 2007-2020 T.Takasu\\n',"")
 src = src.replace('All rights reserved."',"")
 src = src.replace('__attribute__ ((aligned (8)))',"")
 src = src.replace('EXPORT void add_fatal(fatalfunc_t *func);',"")
 src = src.replace('typedef void fatalfunc_t(const char *);',"")
 src = src.replace('EXPORT','extern')
-src = "typedef long time_t;\ntypedef long lock_t;\ntypedef long thread_t;\ntypedef long FILE;\n"+src
+src = "typedef long time_t;\ntypedef long lock_t;\ntypedef long thread_t;\ntypedef long FILE;\ntypedef unsigned char uint8_t;\ntypedef unsigned short int uint16_t;\ntypedef unsigned int uint32_t;\ntypedef short int int16_t;\ntypedef int int32_t;\n"+src
 src = re.sub('\\n+','\\n',re.sub(' \\n','\\n',src).strip())
 parser = pycparser.CParser()
 ast = parser.parse(src)
@@ -234,7 +246,16 @@ for e in elements:
 			struct_mem = e[1].children()[0][1].children()[0][1].children()
 			for i in struct_mem:
 				if type(i[1].type) != pycparser.c_ast.ArrayDecl:
-					node['member'].append(i[1].name)
+					proper = {}
+					line = srcs[i[1].coord.line-1]		
+					proper['name'] = i[1].name
+					proper['type'] = line.replace("const","",).replace('unsigned ','').strip().split(' ')[0]
+					proper['dims'] = []
+					if line.find('*') != -1:
+						proper['dims'].append('*')
+						node['proper'].append(proper)
+					else:
+						node['member'].append(i[1].name)
 				else:
 					proper = {}
 					line = srcs[i[1].coord.line-1]					
@@ -278,16 +299,23 @@ for e in elements:
 				else:
 					S =0
 					D = 0
+					F = 0
 					proper = {}
 					proper['name'] = e[1].name
 					proper['multidef'] = ''
 					proper['dconvert'] = []
 					proper['sconvert'] = []
+					proper['fconvert'] = False
 					proper['type'] = lll[:k.coord.column-1].replace('extern',"").replace('const',"").strip()
 					params = re.findall("\(.*\)",lll)[0].lstrip('(').rstrip(')')
 					proper['src'] = copy.deepcopy(lll)
 					ddp = params.split(',')
 					for k in ddp:
+						if k.find("FILE") != -1:
+							lll = lll.replace("FILE *fp","const char *Ffp, const char *mode")
+							proper['fconvert'] = True
+							F += 1
+							continue
 						if k.find('**') != -1:
 							ttt = k.strip().split(' ')[0]
 							nnn = k.strip().split(' ')[1].strip('*')
@@ -310,7 +338,7 @@ for e in elements:
 								lll = lll.replace(k,'Arr1D<%s> '%ttt.replace("const","").strip()+"S"+nnn)
 								S += 1
 							continue
-					if S == 0 and D == 0:
+					if S == 0 and D == 0 and F == 0:
 						function.append(e[1].name)
 					else:
 						proper['multidef'] = lll
@@ -343,7 +371,7 @@ content = ""
 #process multi first
 for i in functionDouble:
 	content += gen_multidef(i)
-content += '''PYBIND11_MODULE(pyrtklib, m) {
+content += '''PYBIND11_MODULE(pyrtklib5, m) {
     m.doc() = "rtklib python interface by pybind11";
 	m.attr("NULL") = __null;
 '''
@@ -352,9 +380,9 @@ content += gen_defs(defines)
 # 	k = i.replace('const ','')
 # 	content += bindTemp%(k,k)
 for i in struct:
-	content += bindTemp%(i['name'],i['name'])
+	content += bindTemp%(i['name'],i['name'],i['name'],i['name'])
 for i in ['long double','double','float','char','unsigned char','int','unsigned int','short','unsigned short','long','unsigned long']:
-	content += bindTemp%(i,i)
+	content += bindTemp%(i,i,i,i)
 for i in struct:
 	content += gen_struct(i)
 for i in attrArr:
@@ -365,6 +393,7 @@ for i in functionDouble:
 	content += gen_functionPointer(i)
 for i in function:
 	content += gen_func(i)
-content = content.replace('.def_readwrite("data",&obs_t::data)','.def_property_readonly("data",[](obs_t& o) {Arr1D<obsd_t>* tmp = new Arr1D<obsd_t>(o.data,-1);return tmp;},py::return_value_policy::reference)\n        .def("set_data",[](obs_t& o,Arr1D<obsd_t> *nsrc){o.data = nsrc->src;})')
-with open('pyrtklib/pyrtklib.cpp','w') as f:
+content = content.replace('new Arr1D<short>(o.y,-1)', 'new Arr1D<short>(const_cast<short*>(o.y),-1)')
+content = content.replace('strsvr_t& o,Arr1D<char>arr','strsvr_t& o,Arr1D<unsigned char>arr')
+with open('pyrtklib5/pyrtklib5.cpp','w') as f:
 	f.write(header+content+footer)

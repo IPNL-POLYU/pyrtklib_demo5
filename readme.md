@@ -1,6 +1,47 @@
 # PyRTKLIB -- A bridge between AI and GNSS.
 
 ## News
+### 2023.11.07 v0.2.4 Update the rtklib to demo5 b34h
+
+Update the base rtklib version to demo5 b34h
+
+* The support number of Beidou up to 46
+* No implementation functions are deleted. I don't know why they remain in the source code.
+  * input_tersusf
+  * input_cnavf
+  * readfcb
+  * init_cmr
+  * free_cmr
+  * update_cmr
+  * input_cnav
+  * input_tersus
+
+### 2023.11.05 v0.2.3 Bug fix and code optimization
+
+This version contains follow updates:
+
+1. Using template binding functions to replace binding macros.
+2. Arr1Dchar now has an own constructor and can be constructed from a python string.
+   ```python
+   output_path = Arr1Dchar("pyexample_output.txt")
+   ```
+3. Now all the pointer member in structure has a setter function, you can directly modify it like:
+   ```python
+   obs = obs_t()
+   data = Arr1Dobsd_t(100)
+   obs.data = data
+   obs.n = len(data)
+   obs.nmax = obs.n
+   ```
+   But it's not recommended to do so, because this may lead memory leakage. Many pointers in rtklib may refer to anther variable, thus, call free() to directly clear it may cause other problems. Please make sure you won't modify it too often.
+4. obs.set_data() has been removed.
+5. "FILE*" params in functions (input_ubxf, input_rawf e.g.) is devided into "const char *filename, const char *mode", the file open operation will be processed in the overloaded function. Here is an example.
+   ```python
+   raw = raw_t()
+   ret = input_rawt(raw,STRFMT_UBX,Arr1Dchar("example.ubx"),Arr1Dchar("rb"))
+   ```
+6. Fix a serious bug on MacOS in rtkcmn.c. On MacOS (or BSD), _POSIX_C_SOURCE should larger than 199309, or the function strtok_r will have a different behavior, and make segmentation fault.
+7. Optimized the example.
 
 ### 2023.10.14 Install via pip
 

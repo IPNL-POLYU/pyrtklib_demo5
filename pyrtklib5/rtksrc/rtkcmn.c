@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------
 * rtkcmn.c : rtklib common functions
 *
-*          Copyright (C) 2007-2016 by T.TAKASU, All rights reserved.
+*          Copyright (C) 2007-2020 by T.TAKASU, All rights reserved.
 *
 * options : -DLAPACK   use LAPACK/BLAS
 *           -DMKL      use Intel MKL
@@ -15,14 +15,14 @@
 * references :
 *     [1] IS-GPS-200D, Navstar GPS Space Segment/Navigation User Interfaces,
 *         7 March, 2006
-*     [2] RTCA/DO-229C, Minimum operational performanc standards for global
+*     [2] RTCA/DO-229C, Minimum operational performance standards for global
 *         positioning system/wide area augmentation system airborne equipment,
-*         RTCA inc, November 28, 2001
+*         November 28, 2001
 *     [3] M.Rothacher, R.Schmid, ANTEX: The Antenna Exchange Format Version 1.4,
 *         15 September, 2010
 *     [4] A.Gelb ed., Applied Optimal Estimation, The M.I.T Press, 1974
 *     [5] A.E.Niell, Global mapping functions for the atmosphere delay at radio
-*         wavelengths, Jounal of geophysical research, 1996
+*         wavelengths, Journal of geophysical research, 1996
 *     [6] W.Gurtner and L.Estey, RINEX The Receiver Independent Exchange Format
 *         Version 3.00, November 28, 2007
 *     [7] J.Kouba, A Guide to using International GNSS Service (IGS) products,
@@ -47,7 +47,7 @@
 *           2007/05/25 1.3 add function execcmd(),expandpath()
 *           2008/06/21 1.4 add funciton sortobs(),uniqeph(),screent()
 *                          replace geodist() by sagnac correction way
-*           2008/10/29 1.5 fix bug of ionosphereic mapping function
+*           2008/10/29 1.5 fix bug of ionospheric mapping function
 *                          fix bug of seasonal variation term of tropmapf
 *           2008/12/27 1.6 add function tickget(), sleepms(), tracenav(),
 *                          xyz2enu(), satposv(), pntvel(), covecef()
@@ -106,7 +106,7 @@
 *           2015/03/19 1.30 fix bug on interpolation of erp values in geterp()
 *                           add leap second insertion before 2015/07/01 00:00
 *                           add api read_leaps()
-*           2015/05/31 1.31 delte api windupcorr()
+*           2015/05/31 1.31 delete api windupcorr()
 *           2015/08/08 1.32 add compile option CPUTIME_IN_GPST
 *                           add api add_fatal()
 *                           support usno leapsec.dat for api read_leaps()
@@ -125,10 +125,28 @@
 *           2016/09/05 1.40 fix bug on invalid nav data read in readnav()
 *           2016/09/17 1.41 suppress warnings
 *           2016/09/19 1.42 modify api deg2dms() to consider numerical error
+*           2017/04/11 1.43 delete EXPORT for global variables
+*           2018/10/10 1.44 modify api satexclude()
+*           2020/11/30 1.45 add API code2idx() to get freq-index
+*                           add API code2freq() to get carrier frequency
+*                           add API timereset() to reset current time
+*                           modify API obs2code(), code2obs() and setcodepri()
+*                           delete API satwavelen()
+*                           delete API csmooth()
+*                           delete global variable lam_carr[]
+*                           compensate L3,L4,... PCVs by L2 PCV if no PCV data
+*                            in input file by API readpcv()
+*                           add support hatanaka-compressed RINEX files with
+*                            extension ".crx" or ".CRX"
+*                           update stream format strings table
+*                           update obs code strings and priority table
+*                           use integer types in stdint.h
+*                           suppress warnings
 *-----------------------------------------------------------------------------*/
 #define _POSIX_C_SOURCE 199506
 #include <stdarg.h>
 #include <ctype.h>
+#include <errno.h>
 #ifndef WIN32
 #include <dirent.h>
 #include <time.h>
@@ -138,12 +156,13 @@
 #endif
 #include "rtklib.h"
 
-static const char rcsid[]="$Id: rtkcmn.c,v 1.1 2008/07/17 21:48:06 ttaka Exp ttaka $";
-
 /* constants -----------------------------------------------------------------*/
 
 #define POLYCRC32   0xEDB88320u /* CRC32 polynomial */
 #define POLYCRC24Q  0x1864CFBu  /* CRC24Q polynomial */
+
+#define SQR(x)      ((x)*(x))
+#define MAX_VAR_EPH SQR(300.0)  /* max variance eph to reject satellite (m^2) */
 
 static const double gpst0[]={1980,1, 6,0,0,0}; /* gps time reference */
 static const double gst0 []={1999,8,22,0,0,0}; /* galileo system time reference */
@@ -170,7 +189,7 @@ static double leaps[MAXLEAPS+1][7]={ /* leap seconds (y,m,d,h,m,s,utc-gpst) */
     {1981,7,1,0,0,0, -1},
     {0}
 };
-EXPORT const double chisqr[100]={      /* chi-sqr(n) (alpha=0.001) */
+const double chisqr[100]={      /* chi-sqr(n) (alpha=0.001) */
     10.8,13.8,16.3,18.5,20.5,22.5,24.3,26.1,27.9,29.6,
     31.3,32.9,34.5,36.1,37.7,39.3,40.8,42.3,43.8,45.3,
     46.8,48.3,49.7,51.2,52.6,54.1,55.5,56.9,58.3,59.7,
@@ -182,94 +201,84 @@ EXPORT const double chisqr[100]={      /* chi-sqr(n) (alpha=0.001) */
     126 ,127 ,128 ,129 ,131 ,132 ,133 ,134 ,135 ,137 ,
     138 ,139 ,140 ,142 ,143 ,144 ,145 ,147 ,148 ,149
 };
-EXPORT const double lam_carr[MAXFREQ]={ /* carrier wave length (m) */
-    CLIGHT/FREQ1,CLIGHT/FREQ2,CLIGHT/FREQ5,CLIGHT/FREQ6,CLIGHT/FREQ7,
-    CLIGHT/FREQ8,CLIGHT/FREQ9
-};
-EXPORT const prcopt_t prcopt_default={ /* defaults processing options */
-    PMODE_SINGLE,0,2,SYS_GPS,   /* mode,soltype,nf,navsys */
+const prcopt_t prcopt_default={ /* defaults processing options */
+    PMODE_KINEMA,SOLTYPE_FORWARD, /* mode,soltype */
+    2,SYS_GPS|SYS_GLO|SYS_GAL,  /* nf, navsys */
     15.0*D2R,{{0,0}},           /* elmin,snrmask */
-    0,1,1,1,1,0,                /* sateph,modear,glomodear,gpsmodear,bdsmodear,arfilter */
-    5,0,2,2,20,10,              /* maxout,minlock,minfixsats,minholdsats,mindropsats,minfix */
-    0,1,0,0,0,0,                /* rcvstds,armaxiter,estion,esttrop,dynamics,tidecorr */
+    0,3,3,1,0,1,                /* sateph,modear,glomodear,gpsmodear,bdsmodear,arfilter */
+    20,0,4,5,10,20,             /* maxout,minlock,minfixsats,minholdsats,mindropsats,minfix */
+    1,1,1,1,0,                  /* armaxiter,estion,esttrop,dynamics,tidecorr */
     1,0,0,0,0,                  /* niter,codesmooth,intpref,sbascorr,sbassatsel */
     0,0,                        /* rovpos,refpos */
-    {100.0,100.0},              /* eratio[] */
-    {100.0,0.003,0.003,0.0,1.0}, /* err[] */
+    {300.0,300.0,300.0},        /* eratio[] */
+    {100.0,0.003,0.003,0.0,1.0,52.0,0.0,0.0}, /* err[-,base,el,bl,dop,snr_max,snr,rcverr] */
     {30.0,0.03,0.3},            /* std[] */
     {1E-4,1E-3,1E-4,1E-1,1E-2,0.0}, /* prn[] */
     5E-12,                      /* sclkstab */
-    {3.0,0.9999,0.25,0.1,0.05}, /* thresar */
-    0.0,0.0,0.05,.001,.01,      /* elmaskar,elmaskhold,thresslip,varholdamb,gainholdamb */
-    30.0,30.0,30.0,             /* maxtdif,maxinno,maxgdop */
+    {3.0,0.25,0.0,1E-9,1E-5,3.0,3.0,0.0}, /* thresar */
+	0.0,0.0,0.05,0,             /* elmaskar,elmaskhold,thresslip,thresdop, */
+	0.1,0.01,30.0,              /* varholdamb,gainholdamb,maxtdif */
+    {5.0,30.0},                 /* maxinno {phase,code} */
     {0},{0},{0},                /* baseline,ru,rb */
     {"",""},                    /* anttype */
-    {{0}},{{0}},{0}             /* antdel,pcv,exsats */
+    {{0}},{{0}},{0},            /* antdel,pcv,exsats */
+    1,1                         /* maxaveep,initrst */
 };
-EXPORT const solopt_t solopt_default={ /* defaults solution output options */
+const solopt_t solopt_default={ /* defaults solution output options */
     SOLF_LLH,TIMES_GPST,1,3,    /* posf,times,timef,timeu */
-    0,1,0,0,0,0,                /* degf,outhead,outopt,datum,height,geoid */
+    0,1,0,0,0,0,0,              /* degf,outhead,outopt,outvel,datum,height,geoid */
     0,0,0,                      /* solstatic,sstat,trace */
     {0.0,0.0},                  /* nmeaintv */
     " ",""                      /* separator/program name */
 };
-EXPORT const char *formatstrs[32]={    /* stream format strings */
+const char *formatstrs[32]={    /* stream format strings */
     "RTCM 2",                   /*  0 */
     "RTCM 3",                   /*  1 */
-    "NovAtel OEM6",             /*  2 */
-    "NovAtel OEM3",             /*  3 */
-    "u-blox",                   /*  4 */
-    "Superstar II",             /*  5 */
+    "NovAtel OEM7",             /*  2 */
+    "ComNav",                   /*  3 */
+    "u-blox UBX",               /*  4 */
+    "Swift Navigation SBP",     /*  5 */
     "Hemisphere",               /*  6 */
     "SkyTraq",                  /*  7 */
-    "GW10",                     /*  8 */
-    "Javad",                    /*  9 */
-    "NVS BINR",                 /* 10 */
-    "BINEX",                    /* 11 */
-    "Trimble RT17",             /* 12 */
-    "Septentrio",               /* 13 */
-    "CMR/CMR+",                 /* 14 */
-    "LEX Receiver",             /* 15 */
-    "RINEX",                    /* 16 */
-    "SP3",                      /* 17 */
-    "RINEX CLK",                /* 18 */
-    "SBAS",                     /* 19 */
-    "NMEA 0183",                /* 20 */
+    "Javad GREIS",              /*  8 */
+    "NVS BINR",                 /*  9 */
+    "BINEX",                    /* 10 */
+    "Trimble RT17",             /* 11 */
+    "Septentrio SBF",           /* 12 */
+    "Tersus",                   /* 13 */
+    "RINEX",                    /* 14 */
+    "SP3",                      /* 15 */
+    "RINEX CLK",                /* 16 */
+    "SBAS",                     /* 17 */
+    "NMEA 0183",                /* 18 */
+    "TERSUS",                   /* 19 */
     NULL
 };
+
 static char *obscodes[]={       /* observation code strings */
     
     ""  ,"1C","1P","1W","1Y", "1M","1N","1S","1L","1E", /*  0- 9 */
     "1A","1B","1X","1Z","2C", "2D","2S","2L","2X","2P", /* 10-19 */
     "2W","2Y","2M","2N","5I", "5Q","5X","7I","7Q","7X", /* 20-29 */
     "6A","6B","6C","6X","6Z", "6S","6L","8L","8Q","8X", /* 30-39 */
-    "2I","2Q","6I","6Q","3I", "3Q","3X","1I","1Q","5A"  /* 40-49 */
-    "5B","5C","9A","9B","9C", "9X",""  ,""  ,""  ,""    /* 50-59 */
+    "2I","2Q","6I","6Q","3I", "3Q","3X","1I","1Q","5A", /* 40-49 */
+    "5B","5C","9A","9B","9C", "9X","1D","5D","5P","5Z", /* 50-59 */
+    "6E","7D","7P","7Z","8D", "8P","4A","4B","4X",""    /* 60-69 */
 };
-static unsigned char obsfreqs[]={
-    /* 1:L1/E1, 2:L2/B1, 3:L5/E5a/L3, 4:L6/LEX/B3, 5:E5b/B2, 6:E5(a+b), 7:S */
-    0, 1, 1, 1, 1,  1, 1, 1, 1, 1, /*  0- 9 */
-    1, 1, 1, 1, 2,  2, 2, 2, 2, 2, /* 10-19 */
-    2, 2, 2, 2, 3,  3, 3, 5, 5, 5, /* 20-29 */
-    4, 4, 4, 4, 4,  4, 4, 6, 6, 6, /* 30-39 */
-    2, 2, 4, 4, 3,  3, 3, 1, 1, 3, /* 40-49 */
-    3, 3, 7, 7, 7,  7, 0, 0, 0, 0  /* 50-59 */
-};
-static char codepris[7][MAXFREQ][16]={  /* code priority table */
-   
-   /* L1/E1      L2/B1        L5/E5a/L3 L6/LEX/B3 E5b/B2    E5(a+b)  S */
-    {"CPYWMNSL","PYWCMNDSLX","IQX"     ,""       ,""       ,""      ,""    }, /* GPS */
-    {"PC"      ,"PC"        ,"IQX"     ,""       ,""       ,""      ,""    }, /* GLO */
-    {"CABXZ"   ,""          ,"IQX"     ,"ABCXZ"  ,"IQX"    ,"IQX"   ,""    }, /* GAL */
-    {"CSLXZ"   ,"SLX"       ,"IQX"     ,"SLX"    ,""       ,""      ,""    }, /* QZS */
-    {"C"       ,""          ,"IQX"     ,""       ,""       ,""      ,""    }, /* SBS */
-    {"IQX"     ,"IQX"       ,"IQX"     ,"IQX"    ,"IQX"    ,""      ,""    }, /* BDS */
-    {""        ,""          ,"ABCX"    ,""       ,""       ,""      ,"ABCX"}  /* IRN */
+static char codepris[7][MAXFREQ][16]={  /* code priority for each freq-index */
+    /* L1/E1/B1I L2/E5b/B2I L5/E5a/B3I E6/LEX/B2A E5(a+b)         */
+    {"CPYWMNSL","CPYWMNDLSX","IQX"     ,""       ,""       ,""}, /* GPS */
+    {"CPABX"   ,"CPABX"     ,"IQX"     ,""       ,""       ,""}, /* GLO */
+    {"CABXZ"   ,"XIQ"       ,"XIQ"     ,"ABCXZ"  ,"IQX"    ,""}, /* GAL */
+    {"CLSXZ"   ,"LSX"       ,"IQXDPZ"  ,"LSXEZ"  ,""       ,""}, /* QZS */
+    {"C"       ,"IQX"       ,""        ,""       ,""       ,""}, /* SBS */
+    {"IQXDPAN" ,"IQXDPZ"    ,"DPX"     ,"IQXA"   ,"DPX"    ,""}, /* BDS */
+    {"ABCX"    ,"ABCX"      ,""        ,""       ,""       ,""}  /* IRN */
 };
 static fatalfunc_t *fatalfunc=NULL; /* fatal callback function */
 
 /* crc tables generated by util/gencrc ---------------------------------------*/
-static const unsigned short tbl_CRC16[]={
+static const uint16_t tbl_CRC16[]={
     0x0000,0x1021,0x2042,0x3063,0x4084,0x50A5,0x60C6,0x70E7,
     0x8108,0x9129,0xA14A,0xB16B,0xC18C,0xD1AD,0xE1CE,0xF1EF,
     0x1231,0x0210,0x3273,0x2252,0x52B5,0x4294,0x72F7,0x62D6,
@@ -303,7 +312,7 @@ static const unsigned short tbl_CRC16[]={
     0xEF1F,0xFF3E,0xCF5D,0xDF7C,0xAF9B,0xBFBA,0x8FD9,0x9FF8,
     0x6E17,0x7E36,0x4E55,0x5E74,0x2E93,0x3EB2,0x0ED1,0x1EF0
 };
-static const unsigned int tbl_CRC24Q[]={
+static const uint32_t tbl_CRC24Q[]={
     0x000000,0x864CFB,0x8AD50D,0x0C99F6,0x93E6E1,0x15AA1A,0x1933EC,0x9F7F17,
     0xA18139,0x27CDC2,0x2B5434,0xAD18CF,0x3267D8,0xB42B23,0xB8B2D5,0x3EFE2E,
     0xC54E89,0x430272,0x4F9B84,0xC9D77F,0x56A868,0xD0E493,0xDC7D65,0x5A319E,
@@ -513,11 +522,12 @@ extern void satno2id(int sat, char *id)
 /* test excluded satellite -----------------------------------------------------
 * test excluded satellite
 * args   : int    sat       I   satellite number
+*          double var       I   variance of ephemeris (m^2)
 *          int    svh       I   sv health flag
 *          prcopt_t *opt    I   processing options (NULL: not used)
 * return : status (1:excluded,0:not excluded)
 *-----------------------------------------------------------------------------*/
-extern int satexclude(int sat, int svh, const prcopt_t *opt)
+extern int satexclude(int sat, double var, int svh, const prcopt_t *opt)
 {
     int sys=satsys(sat,NULL);
     
@@ -533,97 +543,265 @@ extern int satexclude(int sat, int svh, const prcopt_t *opt)
         trace(3,"unhealthy satellite: sat=%3d svh=%02X\n",sat,svh);
         return 1;
     }
+    if (var>MAX_VAR_EPH) {
+        trace(3,"invalid ura satellite: sat=%3d ura=%.2f\n",sat,sqrt(var));
+        return 1;
+    }
     return 0;
 }
 /* test SNR mask ---------------------------------------------------------------
 * test SNR mask
 * args   : int    base      I   rover or base-station (0:rover,1:base station)
-*          int    freq      I   frequency (0:L1,1:L2,2:L3,...)
+*          int    idx       I   frequency index (0:L1,1:L2,2:L3,...)
 *          double el        I   elevation angle (rad)
 *          double snr       I   C/N0 (dBHz)
 *          snrmask_t *mask  I   SNR mask
 * return : status (1:masked,0:unmasked)
 *-----------------------------------------------------------------------------*/
-extern int testsnr(int base, int freq, double el, double snr,
+extern int testsnr(int base, int idx, double el, double snr,
                    const snrmask_t *mask)
 {
     double minsnr,a;
     int i;
     
-    if (!mask->ena[base]||freq<0||freq>=NFREQ) return 0;
+    if (!mask->ena[base]||idx<0||idx>=NFREQ) return 0;
     
     a=(el*R2D+5.0)/10.0;
     i=(int)floor(a); a-=i;
-    if      (i<1) minsnr=mask->mask[freq][0];
-    else if (i>8) minsnr=mask->mask[freq][8];
-    else minsnr=(1.0-a)*mask->mask[freq][i-1]+a*mask->mask[freq][i];
+    if      (i<1) minsnr=mask->mask[idx][0];
+    else if (i>8) minsnr=mask->mask[idx][8];
+    else minsnr=(1.0-a)*mask->mask[idx][i-1]+a*mask->mask[idx][i];
     
     return snr<minsnr;
 }
 /* obs type string to obs code -------------------------------------------------
 * convert obs code type string to obs code
 * args   : char   *str   I      obs code string ("1C","1P","1Y",...)
-*          int    *freq  IO     frequency (1:L1,2:L2,3:L5,4:L6,5:L7,6:L8,0:err)
-*                               (NULL: no output)
 * return : obs code (CODE_???)
-* notes  : obs codes are based on reference [6] and qzss extension
+* notes  : obs codes are based on RINEX 3.04
 *-----------------------------------------------------------------------------*/
-extern unsigned char obs2code(const char *obs, int *freq)
+extern uint8_t obs2code(const char *obs)
 {
     int i;
-    if (freq) *freq=0;
+    
     for (i=1;*obscodes[i];i++) {
         if (strcmp(obscodes[i],obs)) continue;
-        if (freq) *freq=obsfreqs[i];
-        return (unsigned char)i;
+        return (uint8_t)i;
     }
     return CODE_NONE;
 }
 /* obs code to obs code string -------------------------------------------------
 * convert obs code to obs code string
-* args   : unsigned char code I obs code (CODE_???)
-*          int    *freq  IO     frequency (NULL: no output)
-*                               (1:L1/E1, 2:L2/B1, 3:L5/E5a/L3, 4:L6/LEX/B3,
-                                 5:E5b/B2, 6:E5(a+b), 7:S)
+* args   : uint8_t code     I   obs code (CODE_???)
 * return : obs code string ("1C","1P","1P",...)
-* notes  : obs codes are based on reference [6] and qzss extension
+* notes  : obs codes are based on RINEX 3.04
 *-----------------------------------------------------------------------------*/
-extern char *code2obs(unsigned char code, int *freq)
+extern char *code2obs(uint8_t code)
 {
-    if (freq) *freq=0;
     if (code<=CODE_NONE||MAXCODE<code) return "";
-    if (freq) *freq=obsfreqs[code];
     return obscodes[code];
+}
+/* GPS obs code to frequency -------------------------------------------------*/
+static int code2freq_GPS(uint8_t code, double *freq)
+{
+    char *obs=code2obs(code);
+    
+    switch (obs[0]) {
+        case '1': *freq=FREQL1; return 0; /* L1 */
+        case '2': *freq=FREQL2; return 1; /* L2 */
+        case '5': *freq=FREQL5; return 2; /* L5 */
+    }
+    return -1;
+}
+/* GLONASS obs code to frequency ---------------------------------------------*/
+static int code2freq_GLO(uint8_t code, int fcn, double *freq)
+{
+    char *obs=code2obs(code);
+    
+    if (fcn<-7||fcn>6) return -1;
+    
+    switch (obs[0]) {
+        case '1': *freq=FREQ1_GLO+DFRQ1_GLO*fcn; return 0; /* G1 */
+        case '2': *freq=FREQ2_GLO+DFRQ2_GLO*fcn; return 1; /* G2 */
+        case '3': *freq=FREQ3_GLO;               return 2; /* G3 */
+        case '4': *freq=FREQ1a_GLO;              return 0; /* G1a */
+        case '6': *freq=FREQ2a_GLO;              return 1; /* G2a */
+    }
+    return -1;
+}
+/* Galileo obs code to frequency ---------------------------------------------*/
+static int code2freq_GAL(uint8_t code, double *freq)
+{
+    char *obs=code2obs(code);
+    
+    switch (obs[0]) {
+        case '1': *freq=FREQL1; return 0; /* E1 */
+        case '7': *freq=FREQE5b; return 1; /* E5b */
+        case '5': *freq=FREQL5; return 2; /* E5a */
+        case '6': *freq=FREQL6; return 3; /* E6 */
+        case '8': *freq=FREQE5ab; return 4; /* E5ab */
+    }
+    return -1;
+}
+/* QZSS obs code to frequency ------------------------------------------------*/
+static int code2freq_QZS(uint8_t code, double *freq)
+{
+    char *obs=code2obs(code);
+    
+    switch (obs[0]) {
+        case '1': *freq=FREQL1; return 0; /* L1 */
+        case '2': *freq=FREQL2; return 1; /* L2 */
+        case '5': *freq=FREQL5; return 2; /* L5 */
+        case '6': *freq=FREQL6; return 3; /* L6 */
+    }
+    return -1;
+}
+/* SBAS obs code to frequency ------------------------------------------------*/
+static int code2freq_SBS(uint8_t code, double *freq)
+{
+    char *obs=code2obs(code);
+    
+    switch (obs[0]) {
+        case '1': *freq=FREQL1; return 0; /* L1 */
+        case '5': *freq=FREQL5; return 1; /* L5 */
+    }
+    return -1;
+}
+/* BDS obs code to frequency -------------------------------------------------*/
+static int code2freq_BDS(uint8_t code, double *freq)
+{
+    char *obs=code2obs(code);
+    
+    switch (obs[0]) {
+        case '1': *freq=FREQL1;     return 0; /* B1C */
+        case '2': *freq=FREQ1_CMP; return 0; /* B1I */
+        case '7': *freq=FREQ2_CMP; return 1; /* B2I/B2b */
+        case '6': *freq=FREQ3_CMP; return 2; /* B3 */
+        case '5': *freq=FREQL5;     return 3; /* B2a */
+        case '8': *freq=FREQE5ab;     return 4; /* B2ab */
+    }
+    return -1;
+}
+/* NavIC obs code to frequency -----------------------------------------------*/
+static int code2freq_IRN(uint8_t code, double *freq)
+{
+    char *obs=code2obs(code);
+    
+    switch (obs[0]) {
+        case '5': *freq=FREQL5; return 0; /* L5 */
+        case '9': *freq=FREQs; return 1; /* S */
+    }
+    return -1;
+}
+/* system and obs code to frequency index --------------------------------------
+* convert system and obs code to frequency index
+* args   : int    sys       I   satellite system (SYS_???)
+*          uint8_t code     I   obs code (CODE_???)
+* return : frequency index (-1: error)
+*                       0     1     2     3     4 
+*           --------------------------------------
+*            GPS       L1    L2    L5     -     - 
+*            GLONASS   G1    G2    G3     -     -  (G1=G1,G1a,G2=G2,G2a)
+*            Galileo   E1    E5b   E5a   E6   E5ab
+*            QZSS      L1    L2    L5    L6     - 
+*            SBAS      L1     -    L5     -     -
+*            BDS       B1    B2    B3   B2a   B2ab (B1=B1I,B1C,B2=B2I,B2b)
+*            NavIC     L5     S     -     -     - 
+*-----------------------------------------------------------------------------*/
+extern int code2idx(int sys, uint8_t code)
+{
+    double freq;
+    
+    switch (sys) {
+        case SYS_GPS: return code2freq_GPS(code,&freq);
+        case SYS_GLO: return code2freq_GLO(code,0,&freq);
+        case SYS_GAL: return code2freq_GAL(code,&freq);
+        case SYS_QZS: return code2freq_QZS(code,&freq);
+        case SYS_SBS: return code2freq_SBS(code,&freq);
+        case SYS_CMP: return code2freq_BDS(code,&freq);
+        case SYS_IRN: return code2freq_IRN(code,&freq);
+    }
+    return -1;
+}
+/* system and obs code to frequency --------------------------------------------
+* convert system and obs code to carrier frequency
+* args   : int    sys       I   satellite system (SYS_???)
+*          uint8_t code     I   obs code (CODE_???)
+*          int    fcn       I   frequency channel number for GLONASS
+* return : carrier frequency (Hz) (0.0: error)
+*-----------------------------------------------------------------------------*/
+extern double code2freq(int sys, uint8_t code, int fcn)
+{
+    double freq=0.0;
+    
+    switch (sys) {
+        case SYS_GPS: (void)code2freq_GPS(code,&freq); break;
+        case SYS_GLO: (void)code2freq_GLO(code,fcn,&freq); break;
+        case SYS_GAL: (void)code2freq_GAL(code,&freq); break;
+        case SYS_QZS: (void)code2freq_QZS(code,&freq); break;
+        case SYS_SBS: (void)code2freq_SBS(code,&freq); break;
+        case SYS_CMP: (void)code2freq_BDS(code,&freq); break;
+        case SYS_IRN: (void)code2freq_IRN(code,&freq); break;
+    }
+    return freq;
+}
+/* satellite and obs code to frequency -----------------------------------------
+* convert satellite and obs code to carrier frequency
+* args   : int    sat       I   satellite number
+*          uint8_t code     I   obs code (CODE_???)
+*          nav_t  *nav_t    I   navigation data for GLONASS (NULL: not used)
+* return : carrier frequency (Hz) (0.0: error)
+*-----------------------------------------------------------------------------*/
+extern double sat2freq(int sat, uint8_t code, const nav_t *nav)
+{
+    int i,fcn=0,sys,prn;
+    
+    sys=satsys(sat,&prn);
+    
+    if (sys==SYS_GLO) {
+        if (!nav) return 0.0;
+        for (i=0;i<nav->ng;i++) {
+            if (nav->geph[i].sat==sat) break;
+        }
+        if (i<nav->ng) {
+            fcn=nav->geph[i].frq;
+        }
+        else if (nav->glo_fcn[prn-1]>0) {
+            fcn=nav->glo_fcn[prn-1]-8;
+        }
+        else return 0.0;
+    }
+    return code2freq(sys,code,fcn);
 }
 /* set code priority -----------------------------------------------------------
 * set code priority for multiple codes in a frequency
-* args   : int    sys     I     system (or of SYS_???)
-*          int    freq    I     frequency (1:L1,2:L2,3:L5,4:L6,5:L7,6:L8,7:L9)
-*          char   *pri    I     priority of codes (series of code characters)
+* args   : int    sys       I   system (or of SYS_???)
+*          int    idx       I   frequency index (0- )
+*          char   *pri      I   priority of codes (series of code characters)
 *                               (higher priority precedes lower)
 * return : none
 *-----------------------------------------------------------------------------*/
-extern void setcodepri(int sys, int freq, const char *pri)
+extern void setcodepri(int sys, int idx, const char *pri)
 {
-    trace(3,"setcodepri:sys=%d freq=%d pri=%s\n",sys,freq,pri);
+    trace(3,"setcodepri:sys=%d idx=%d pri=%s\n",sys,idx,pri);
     
-    if (freq<=0||MAXFREQ<freq) return;
-    if (sys&SYS_GPS) strcpy(codepris[0][freq-1],pri);
-    if (sys&SYS_GLO) strcpy(codepris[1][freq-1],pri);
-    if (sys&SYS_GAL) strcpy(codepris[2][freq-1],pri);
-    if (sys&SYS_QZS) strcpy(codepris[3][freq-1],pri);
-    if (sys&SYS_SBS) strcpy(codepris[4][freq-1],pri);
-    if (sys&SYS_CMP) strcpy(codepris[5][freq-1],pri);
-    if (sys&SYS_IRN) strcpy(codepris[6][freq-1],pri);
+    if (idx<0||idx>=MAXFREQ) return;
+    if (sys&SYS_GPS) strcpy(codepris[0][idx],pri);
+    if (sys&SYS_GLO) strcpy(codepris[1][idx],pri);
+    if (sys&SYS_GAL) strcpy(codepris[2][idx],pri);
+    if (sys&SYS_QZS) strcpy(codepris[3][idx],pri);
+    if (sys&SYS_SBS) strcpy(codepris[4][idx],pri);
+    if (sys&SYS_CMP) strcpy(codepris[5][idx],pri);
+    if (sys&SYS_IRN) strcpy(codepris[6][idx],pri);
 }
 /* get code priority -----------------------------------------------------------
 * get code priority for multiple codes in a frequency
-* args   : int    sys     I     system (SYS_???)
-*          unsigned char code I obs code (CODE_???)
-*          char   *opt    I     code options (NULL:no option)
+* args   : int    sys       I   system (SYS_???)
+*          uint8_t code     I   obs code (CODE_???)
+*          char   *opt      I   code options (NULL:no option)
 * return : priority (15:highest-1:lowest,0:error)
 *-----------------------------------------------------------------------------*/
-extern int getcodepri(int sys, unsigned char code, const char *opt)
+extern int getcodepri(int sys, uint8_t code, const char *opt)
 {
     const char *p,*optstr;
     char *obs,str[8]="";
@@ -639,7 +817,8 @@ extern int getcodepri(int sys, unsigned char code, const char *opt)
         case SYS_IRN: i=6; optstr="-IL%2s"; break;
         default: return 0;
     }
-    obs=code2obs(code,&j);
+    if ((j=code2idx(sys,code))<0) return 0;
+    obs=code2obs(code);
     
     /* parse code options */
     for (p=opt;p&&(p=strchr(p,'-'));p++) {
@@ -647,60 +826,60 @@ extern int getcodepri(int sys, unsigned char code, const char *opt)
         return str[1]==obs[1]?15:0;
     }
     /* search code priority */
-    return (p=strchr(codepris[i][j-1],obs[1]))?14-(int)(p-codepris[i][j-1]):0;
+    return (p=strchr(codepris[i][j],obs[1]))?14-(int)(p-codepris[i][j]):0;
 }
 /* extract unsigned/signed bits ------------------------------------------------
 * extract unsigned/signed bits from byte data
-* args   : unsigned char *buff I byte data
-*          int    pos    I      bit position from start of data (bits)
-*          int    len    I      bit length (bits) (len<=32)
+* args   : uint8_t *buff    I   byte data
+*          int    pos       I   bit position from start of data (bits)
+*          int    len       I   bit length (bits) (len<=32)
 * return : extracted unsigned/signed bits
 *-----------------------------------------------------------------------------*/
-extern unsigned int getbitu(const unsigned char *buff, int pos, int len)
+extern uint32_t getbitu(const uint8_t *buff, int pos, int len)
 {
-    unsigned int bits=0;
+    uint32_t bits=0;
     int i;
     for (i=pos;i<pos+len;i++) bits=(bits<<1)+((buff[i/8]>>(7-i%8))&1u);
     return bits;
 }
-extern int getbits(const unsigned char *buff, int pos, int len)
+extern int32_t getbits(const uint8_t *buff, int pos, int len)
 {
-    unsigned int bits=getbitu(buff,pos,len);
-    if (len<=0||32<=len||!(bits&(1u<<(len-1)))) return (int)bits;
-    return (int)(bits|(~0u<<len)); /* extend sign */
+    uint32_t bits=getbitu(buff,pos,len);
+    if (len<=0||32<=len||!(bits&(1u<<(len-1)))) return (int32_t)bits;
+    return (int32_t)(bits|(~0u<<len)); /* extend sign */
 }
 /* set unsigned/signed bits ----------------------------------------------------
 * set unsigned/signed bits to byte data
-* args   : unsigned char *buff IO byte data
-*          int    pos    I      bit position from start of data (bits)
-*          int    len    I      bit length (bits) (len<=32)
-*         (unsigned) int I      unsigned/signed data
+* args   : uint8_t *buff IO byte data
+*          int    pos       I   bit position from start of data (bits)
+*          int    len       I   bit length (bits) (len<=32)
+*          [u]int32_t data  I   unsigned/signed data
 * return : none
 *-----------------------------------------------------------------------------*/
-extern void setbitu(unsigned char *buff, int pos, int len, unsigned int data)
+extern void setbitu(uint8_t *buff, int pos, int len, uint32_t data)
 {
-    unsigned int mask=1u<<(len-1);
+    uint32_t mask=1u<<(len-1);
     int i;
     if (len<=0||32<len) return;
     for (i=pos;i<pos+len;i++,mask>>=1) {
         if (data&mask) buff[i/8]|=1u<<(7-i%8); else buff[i/8]&=~(1u<<(7-i%8));
     }
 }
-extern void setbits(unsigned char *buff, int pos, int len, int data)
+extern void setbits(uint8_t *buff, int pos, int len, int32_t data)
 {
     if (data<0) data|=1<<(len-1); else data&=~(1<<(len-1)); /* set sign bit */
-    setbitu(buff,pos,len,(unsigned int)data);
+    setbitu(buff,pos,len,(uint32_t)data);
 }
 /* crc-32 parity ---------------------------------------------------------------
 * compute crc-32 parity for novatel raw
-* args   : unsigned char *buff I data
-*          int    len    I      data length (bytes)
+* args   : uint8_t *buff    I   data
+*          int    len       I   data length (bytes)
 * return : crc-32 parity
 * notes  : see NovAtel OEMV firmware manual 1.7 32-bit CRC
 *-----------------------------------------------------------------------------*/
-extern unsigned int rtk_crc32(const unsigned char *buff, int len)
+extern uint32_t rtk_crc32(const uint8_t *buff, int len)
 {
-    unsigned int crc=0;
+    uint32_t crc=0;
     int i,j;
     
     trace(4,"rtk_crc32: len=%d\n",len);
@@ -715,14 +894,14 @@ extern unsigned int rtk_crc32(const unsigned char *buff, int len)
 }
 /* crc-24q parity --------------------------------------------------------------
 * compute crc-24q parity for sbas, rtcm3
-* args   : unsigned char *buff I data
-*          int    len    I      data length (bytes)
+* args   : uint8_t *buff    I   data
+*          int    len       I   data length (bytes)
 * return : crc-24Q parity
 * notes  : see reference [2] A.4.3.3 Parity
 *-----------------------------------------------------------------------------*/
-extern unsigned int rtk_crc24q(const unsigned char *buff, int len)
+extern uint32_t rtk_crc24q(const uint8_t *buff, int len)
 {
-    unsigned int crc=0;
+    uint32_t crc=0;
     int i;
     
     trace(4,"rtk_crc24q: len=%d\n",len);
@@ -732,14 +911,14 @@ extern unsigned int rtk_crc24q(const unsigned char *buff, int len)
 }
 /* crc-16 parity ---------------------------------------------------------------
 * compute crc-16 parity for binex, nvs
-* args   : unsigned char *buff I data
-*          int    len    I      data length (bytes)
+* args   : uint8_t *buff    I   data
+*          int    len       I   data length (bytes)
 * return : crc-16 parity
 * notes  : see reference [10] A.3.
 *-----------------------------------------------------------------------------*/
-extern unsigned short rtk_crc16(const unsigned char *buff, int len)
+extern uint16_t rtk_crc16(const uint8_t *buff, int len)
 {
-    unsigned short crc=0;
+    uint16_t crc=0;
     int i;
     
     trace(4,"rtk_crc16: len=%d\n",len);
@@ -751,19 +930,19 @@ extern unsigned short rtk_crc16(const unsigned char *buff, int len)
 }
 /* decode navigation data word -------------------------------------------------
 * check party and decode navigation data word
-* args   : unsigned int word I navigation data word (2+30bit)
-*                              (previous word D29*-30* + current word D1-30)
-*          unsigned char *data O decoded navigation data without parity
-*                              (8bitx3)
+* args   : uint32_t word    I   navigation data word (2+30bit)
+*                               (previous word D29*-30* + current word D1-30)
+*          uint8_t *data    O   decoded navigation data without parity
+*                               (8bitx3)
 * return : status (1:ok,0:parity error)
 * notes  : see reference [1] 20.3.5.2 user parity algorithm
 *-----------------------------------------------------------------------------*/
-extern int decode_word(unsigned int word, unsigned char *data)
+extern int decode_word(uint32_t word, uint8_t *data)
 {
-    const unsigned int hamming[]={
+    const uint32_t hamming[]={
         0xBB1F3480,0x5D8F9A40,0xAEC7CD00,0x5763E680,0x6BB1F340,0x8B7A89C0
     };
-    unsigned int parity=0,w;
+    uint32_t parity=0,w;
     int i;
     
     trace(5,"decodeword: word=%08x\n",word);
@@ -776,7 +955,7 @@ extern int decode_word(unsigned int word, unsigned char *data)
     }
     if (parity!=(word&0x3F)) return 0;
     
-    for (i=0;i<3;i++) data[i]=(unsigned char)(word>>(22-i*8));
+    for (i=0;i<3;i++) data[i]=(uint8_t)(word>>(22-i*8));
     return 1;
 }
 /* new matrix ------------------------------------------------------------------
@@ -879,7 +1058,7 @@ extern void cross3(const double *a, const double *b, double *c)
 /* normalize 3d vector ---------------------------------------------------------
 * normalize 3d vector
 * args   : double *a        I   vector a (3 x 1)
-*          double *b        O   normlized vector (3 x 1) || b || = 1
+*          double *b        O   normalized vector (3 x 1) || b || = 1
 * return : status (1:ok,0:error)
 *-----------------------------------------------------------------------------*/
 extern int normv3(const double *a, double *b)
@@ -949,7 +1128,7 @@ extern int matinv(double *A, int n)
 *          int    n,m       I   size of matrix A,Y
 *          double *X        O   X=A\Y or X=A'\Y (n x m)
 * return : status (0:ok,0>:error)
-* notes  : matirix stored by column-major order (fortran convention)
+* notes  : matrix stored by column-major order (fortran convention)
 *          X can be same as Y
 *-----------------------------------------------------------------------------*/
 extern int solve(const char *tr, const double *A, const double *Y, int n,
@@ -1045,7 +1224,8 @@ extern int matinv(double *A, int n)
     indx=imat(n,1); B=mat(n,n); matcpy(B,A,n,n);
     if (ludcmp(B,n,indx,&d)) {free(indx); free(B); return -1;}
     for (j=0;j<n;j++) {
-        for (i=0;i<n;i++) A[i+j*n]=0.0; A[j+j*n]=1.0;
+        for (i=0;i<n;i++) A[i+j*n]=0.0;
+        A[j+j*n]=1.0;
         lubksb(B,n,indx,A+j*n);
     }
     free(indx); free(B);
@@ -1071,11 +1251,11 @@ extern int solve(const char *tr, const double *A, const double *Y, int n,
 * args   : double *A        I   transpose of (weighted) design matrix (n x m)
 *          double *y        I   (weighted) measurements (m x 1)
 *          int    n,m       I   number of parameters and measurements (n<=m)
-*          double *x        O   estmated parameters (n x 1)
-*          double *Q        O   esimated parameters covariance matrix (n x n)
+*          double *x        O   estimated parameters (n x 1)
+*          double *Q        O   estimated parameters covariance matrix (n x n)
 * return : status (0:ok,0>:error)
 * notes  : for weighted least square, replace A and y by A*w and w*y (w=W^(1/2))
-*          matirix stored by column-major order (fortran convention)
+*          matrix stored by column-major order (fortran convention)
 *-----------------------------------------------------------------------------*/
 extern int lsq(const double *A, const double *y, int n, int m, double *x,
                double *Q)
@@ -1105,7 +1285,7 @@ extern int lsq(const double *A, const double *y, int n, int m, double *x,
 *          double *xp       O   states vector after update (n x 1)
 *          double *Pp       O   covariance matrix of states after update (n x n)
 * return : status (0:ok,<0:error)
-* notes  : matirix stored by column-major order (fortran convention)
+* notes  : matrix stored by column-major order (fortran convention)
 *          if state x[i]==0.0, not updates state x[i]/P[i+i*n]
 *-----------------------------------------------------------------------------*/
 static int filter_(const double *x, const double *P, const double *H,
@@ -1167,7 +1347,7 @@ extern int filter(double *x, double *P, const double *H, const double *v,
 *          double *Qs       O   smoothed solutions covariance matrix (n x n)
 * return : status (0:ok,0>:error)
 * notes  : see reference [4] 5.2
-*          matirix stored by column-major order (fortran convention)
+*          matrix stored by column-major order (fortran convention)
 *-----------------------------------------------------------------------------*/
 extern int smoother(const double *xf, const double *Qf, const double *xb,
                     const double *Qb, int n, double *xs, double *Qs)
@@ -1195,7 +1375,7 @@ extern int smoother(const double *xf, const double *Qf, const double *xb,
 *          int    p,q       I   total columns, columns under decimal point
 *         (FILE  *fp        I   output file pointer)
 * return : none
-* notes  : matirix stored by column-major order (fortran convention)
+* notes  : matrix stored by column-major order (fortran convention)
 *-----------------------------------------------------------------------------*/
 extern void matfprint(const double A[], int n, int m, int p, int q, FILE *fp)
 {
@@ -1222,7 +1402,8 @@ extern double str2num(const char *s, int i, int n)
     char str[256],*p=str;
     
     if (i<0||(int)strlen(s)<i||(int)sizeof(str)-1<n) return 0.0;
-    for (s+=i;*s&&--n>=0;s++) *p++=*s=='d'||*s=='D'?'E':*s; *p='\0';
+    for (s+=i;*s&&--n>=0;s++) *p++=*s=='d'||*s=='D'?'E':*s;
+    *p='\0';
     return sscanf(str,"%lf",&value)==1?value:0.0;
 }
 /* string to time --------------------------------------------------------------
@@ -1238,7 +1419,8 @@ extern int str2time(const char *s, int i, int n, gtime_t *t)
     char str[256],*p=str;
     
     if (i<0||(int)strlen(s)<i||(int)sizeof(str)-1<i) return -1;
-    for (s+=i;*s&&--n>=0;) *p++=*s++; *p='\0';
+    for (s+=i;*s&&--n>=0;) *p++=*s++;
+    *p='\0';
     if (sscanf(str,"%lf %lf %lf %lf %lf %lf",ep,ep+1,ep+2,ep+3,ep+4,ep+5)<6)
         return -1;
     if (ep[0]<100.0) ep[0]+=ep[0]<80.0?2000.0:1900.0;
@@ -1289,6 +1471,13 @@ extern void time2epoch(gtime_t t, double *ep)
     }
     ep[0]=1970+days/1461*4+mon/12; ep[1]=mon%12+1; ep[2]=day+1;
     ep[3]=sec/3600; ep[4]=sec%3600/60; ep[5]=sec%60+t.sec;
+}
+/* same as above but output limited to n decimals for formatted output */
+extern void time2epoch_n(gtime_t t, double *ep, int n)
+{
+    if (n<0) n=0; else if (n>12) n=12;
+    if (1.0-t.sec<0.5/pow(10.0,n)) {t.time++; t.sec=0.0;};
+    time2epoch(t,ep);
 }
 /* gps time to time ------------------------------------------------------------
 * convert week and tow in gps time to gtime_t struct
@@ -1447,6 +1636,15 @@ extern void timeset(gtime_t t)
 {
     timeoffset_+=timediff(t,timeget());
 }
+/* reset current time ----------------------------------------------------------
+* reset current time
+* args   : none
+* return : none
+*-----------------------------------------------------------------------------*/
+extern void timereset(void)
+{
+    timeoffset_=0.0;
+}
 /* read leap seconds table by text -------------------------------------------*/
 static int read_leaps_text(FILE *fp)
 {
@@ -1471,7 +1669,7 @@ static int read_leaps_usno(FILE *fp)
         "JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"
     };
     double jd,tai_utc;
-    char buff[256],month[32],ls[MAXLEAPS][7]={{0}};
+    char buff[256],month[32]={'\0'},ls[MAXLEAPS][7]={{0}};
     int i,j,y,m,d,n=0;
     
     rewind(fp);
@@ -1498,7 +1696,7 @@ static int read_leaps_usno(FILE *fp)
 * return : status (1:ok,0:error)
 * notes  : The leap second table should be as follows or leapsec.dat provided
 *          by USNO.
-*          (1) The records in the table file cosist of the following fields:
+*          (1) The records in the table file consist of the following fields:
 *              year month day hour min sec UTC-GPST(s)
 *          (2) The date and time indicate the start UTC time for the UTC-GPST
 *          (3) The date and time should be descending order.
@@ -1649,7 +1847,7 @@ extern double time2doy(gtime_t t)
 }
 /* adjust gps week number ------------------------------------------------------
 * adjust gps week number using cpu time
-* args   : int   week       I   not-adjusted gps week number
+* args   : int   week       I   not-adjusted gps week number (0-1023)
 * return : adjusted gps week number
 *-----------------------------------------------------------------------------*/
 extern int adjgpsweek(int week)
@@ -1657,17 +1855,17 @@ extern int adjgpsweek(int week)
     int w;
     (void)time2gpst(utc2gpst(timeget()),&w);
     if (w<1560) w=1560; /* use 2009/12/1 if time is earlier than 2009/12/1 */
-    return week+(w-week+512)/1024*1024;
+    return week+(w-week+1)/1024*1024;
 }
 /* get tick time ---------------------------------------------------------------
 * get current tick in ms
 * args   : none
 * return : current tick in ms
 *-----------------------------------------------------------------------------*/
-extern unsigned int tickget(void)
+extern uint32_t tickget(void)
 {
 #ifdef WIN32
-    return (unsigned int)timeGetTime();
+    return (uint32_t)timeGetTime();
 #else
     struct timespec tp={0};
     struct timeval  tv={0};
@@ -1689,7 +1887,7 @@ extern unsigned int tickget(void)
 }
 /* sleep ms --------------------------------------------------------------------
 * sleep ms
-* args   : int   ms         I   miliseconds to sleep (<0:no sleep)
+* args   : int   ms         I   milliseconds to sleep (<0:no sleep)
 * return : none
 *-----------------------------------------------------------------------------*/
 extern void sleepms(int ms)
@@ -1775,12 +1973,12 @@ extern void pos2ecef(const double *pos, double *r)
     r[1]=(v+pos[2])*cosp*sinl;
     r[2]=(v*(1.0-e2)+pos[2])*sinp;
 }
-/* ecef to local coordinate transfromation matrix ------------------------------
-* compute ecef to local coordinate transfromation matrix
+/* ecef to local coordinate transformation matrix ------------------------------
+* compute ecef to local coordinate transformation matrix
 * args   : double *pos      I   geodetic position {lat,lon} (rad)
 *          double *E        O   ecef to local coord transformation matrix (3x3)
 * return : none
-* notes  : matirix stored by column-major order (fortran convention)
+* notes  : matrix stored by column-major order (fortran convention)
 *-----------------------------------------------------------------------------*/
 extern void xyz2enu(const double *pos, double *E)
 {
@@ -1790,11 +1988,11 @@ extern void xyz2enu(const double *pos, double *E)
     E[1]=-sinp*cosl; E[4]=-sinp*sinl; E[7]=cosp;
     E[2]=cosp*cosl;  E[5]=cosp*sinl;  E[8]=sinp;
 }
-/* transform ecef vector to local tangental coordinate -------------------------
-* transform ecef vector to local tangental coordinate
+/* transform ecef vector to local tangential coordinate -------------------------
+* transform ecef vector to local tangential coordinate
 * args   : double *pos      I   geodetic position {lat,lon} (rad)
 *          double *r        I   vector in ecef coordinate {x,y,z}
-*          double *e        O   vector in local tangental coordinate {e,n,u}
+*          double *e        O   vector in local tangential coordinate {e,n,u}
 * return : none
 *-----------------------------------------------------------------------------*/
 extern void ecef2enu(const double *pos, const double *r, double *e)
@@ -1805,9 +2003,9 @@ extern void ecef2enu(const double *pos, const double *r, double *e)
     matmul("NN",3,1,3,1.0,E,r,0.0,e);
 }
 /* transform local vector to ecef coordinate -----------------------------------
-* transform local tangental coordinate vector to ecef
+* transform local tangential coordinate vector to ecef
 * args   : double *pos      I   geodetic position {lat,lon} (rad)
-*          double *e        I   vector in local tangental coordinate {e,n,u}
+*          double *e        I   vector in local tangential coordinate {e,n,u}
 *          double *r        O   vector in ecef coordinate {x,y,z}
 * return : none
 *-----------------------------------------------------------------------------*/
@@ -1818,11 +2016,11 @@ extern void enu2ecef(const double *pos, const double *e, double *r)
     xyz2enu(pos,E);
     matmul("TN",3,1,3,1.0,E,e,0.0,r);
 }
-/* transform covariance to local tangental coordinate --------------------------
-* transform ecef covariance to local tangental coordinate
+/* transform covariance to local tangential coordinate --------------------------
+* transform ecef covariance to local tangential coordinate
 * args   : double *pos      I   geodetic position {lat,lon} (rad)
 *          double *P        I   covariance in ecef coordinate
-*          double *Q        O   covariance in local tangental coordinate
+*          double *Q        O   covariance in local tangential coordinate
 * return : none
 *-----------------------------------------------------------------------------*/
 extern void covenu(const double *pos, const double *P, double *Q)
@@ -2164,7 +2362,7 @@ static int readantex(const char *file, pcvs_t *pcvs)
     static const pcv_t pcv0={0};
     pcv_t pcv;
     double neu[3];
-    int i,f,freq=0,state=0,freqs[]={1,2,5,6,7,8,0};
+    int i,f,freq=0,state=0,freqs[]={1,2,5,0};
     char buff[256];
     
     trace(3,"readantex: file=%s\n",file);
@@ -2201,9 +2399,12 @@ static int readantex(const char *file, pcvs_t *pcvs)
             if (!str2time(buff,0,43,&pcv.te)) continue;
         }
         else if (strstr(buff+60,"START OF FREQUENCY")) {
+            if (!pcv.sat&&buff[3]!='G') continue; /* only read rec ant for GPS */
             if (sscanf(buff+4,"%d",&f)<1) continue;
-            for (i=0;i<NFREQ;i++) if (freqs[i]==f) break;
-            if (i<NFREQ) freq=i+1;
+            for (i=0;freqs[i];i++) if (freqs[i]==f) break;
+            if (freqs[i]) freq=i+1;
+            /* for Galileo E5b: save to E2, not E7  */
+            if (satsys(pcv.sat,NULL)==SYS_GAL&&f==7) freq=2;
         }
         else if (strstr(buff+60,"END OF FREQUENCY")) {
             freq=0;
@@ -2274,7 +2475,7 @@ extern pcv_t *searchpcv(int sat, const char *type, gtime_t time,
     char buff[MAXANT],*types[2],*p;
     int i,j,n=0;
     
-    trace(3,"searchpcv: sat=%2d type=%s\n",sat,type);
+    trace(4,"searchpcv: sat=%2d type=%s\n",sat,type);
     
     if (sat) { /* search satellite antenna */
         for (i=0;i<pcvs->n;i++) {
@@ -2334,7 +2535,7 @@ extern void readpos(const char *file, const char *rcv, double *pos)
         if (buff[0]=='%'||buff[0]=='#') continue;
         if (sscanf(buff,"%lf %lf %lf %s",&poss[np][0],&poss[np][1],&poss[np][2],
                    str)<4) continue;
-        strncpy(stas[np],str,15); stas[np++][15]='\0';
+        sprintf(stas[np++],"%.15s",str);
     }
     fclose(fp);
     len=(int)strlen(rcv);
@@ -2375,7 +2576,7 @@ extern int readblq(const char *file, const char *sta, double *odisp)
     char buff[256],staname[32]="",name[32],*p;
     
     /* station name to upper case */
-    sscanf(sta,"%16s",staname);
+    (void)sscanf(sta,"%16s",staname);
     for (p=staname;(*p=(char)toupper((int)(*p)));p++) ;
     
     if (!(fp=fopen(file,"r"))) {
@@ -2617,19 +2818,12 @@ static void uniqseph(nav_t *nav)
 *-----------------------------------------------------------------------------*/
 extern void uniqnav(nav_t *nav)
 {
-    int i,j;
-    
     trace(3,"uniqnav: neph=%d ngeph=%d nseph=%d\n",nav->n,nav->ng,nav->ns);
     
     /* unique ephemeris */
     uniqeph (nav);
     uniqgeph(nav);
     uniqseph(nav);
-    
-    /* update carrier wave length */
-    for (i=0;i<MAXSAT;i++) for (j=0;j<NFREQ;j++) {
-        nav->lam[i][j]=satwavelen(i+1,j,nav);
-    }
 }
 /* compare observation data -------------------------------------------------*/
 static int cmpobs(const void *p1, const void *p2)
@@ -2708,13 +2902,12 @@ extern int readnav(const char *file, nav_t *nav)
     while (fgets(buff,sizeof(buff),fp)) {
         if (!strncmp(buff,"IONUTC",6)) {
             for (i=0;i<8;i++) nav->ion_gps[i]=0.0;
-            for (i=0;i<4;i++) nav->utc_gps[i]=0.0;
-            nav->leaps=0;
-            sscanf(buff,"IONUTC,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%d",
+            for (i=0;i<8;i++) nav->utc_gps[i]=0.0;
+            (void)sscanf(buff,"IONUTC,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf",
                    &nav->ion_gps[0],&nav->ion_gps[1],&nav->ion_gps[2],&nav->ion_gps[3],
                    &nav->ion_gps[4],&nav->ion_gps[5],&nav->ion_gps[6],&nav->ion_gps[7],
                    &nav->utc_gps[0],&nav->utc_gps[1],&nav->utc_gps[2],&nav->utc_gps[3],
-                   &nav->leaps);
+                   &nav->utc_gps[4]);
             continue;   
         }
         if ((p=strchr(buff,','))) *p='\0'; else continue;
@@ -2723,7 +2916,7 @@ extern int readnav(const char *file, nav_t *nav)
             nav->geph[prn-1]=geph0;
             nav->geph[prn-1].sat=sat;
             toe_time=tof_time=0;
-            sscanf(p+1,"%d,%d,%d,%d,%d,%ld,%ld,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,"
+            (void)sscanf(p+1,"%d,%d,%d,%d,%d,%ld,%ld,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,"
                         "%lf,%lf,%lf,%lf",
                    &nav->geph[prn-1].iode,&nav->geph[prn-1].frq,&nav->geph[prn-1].svh,
                    &nav->geph[prn-1].sva,&nav->geph[prn-1].age,
@@ -2739,7 +2932,7 @@ extern int readnav(const char *file, nav_t *nav)
             nav->eph[sat-1]=eph0;
             nav->eph[sat-1].sat=sat;
             toe_time=toc_time=ttr_time=0;
-            sscanf(p+1,"%d,%d,%d,%d,%ld,%ld,%ld,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,"
+            (void)sscanf(p+1,"%d,%d,%d,%d,%ld,%ld,%ld,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,"
                         "%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%d,%d",
                    &nav->eph[sat-1].iode,&nav->eph[sat-1].iodc,&nav->eph[sat-1].sva ,
                    &nav->eph[sat-1].svh ,
@@ -2799,12 +2992,12 @@ extern int savenav(const char *file, const nav_t *nav)
                 nav->geph[i].acc[0],nav->geph[i].acc[1],nav->geph[i].acc[2],
                 nav->geph[i].taun,nav->geph[i].gamn,nav->geph[i].dtaun);
     }
-    fprintf(fp,"IONUTC,%.14E,%.14E,%.14E,%.14E,%.14E,%.14E,%.14E,%.14E,%.14E,"
-               "%.14E,%.14E,%.14E,%d",
+    /*fprintf(fp,"IONUTC,%.14E,%.14E,%.14E,%.14E,%.14E,%.14E,%.14E,%.14E,%.14E,"
+               "%.14E,%.14E,%.14E,%.0f",
             nav->ion_gps[0],nav->ion_gps[1],nav->ion_gps[2],nav->ion_gps[3],
             nav->ion_gps[4],nav->ion_gps[5],nav->ion_gps[6],nav->ion_gps[7],
             nav->utc_gps[0],nav->utc_gps[1],nav->utc_gps[2],nav->utc_gps[3],
-            nav->leaps);
+            nav->utc_gps[4]);*/
     
     fclose(fp);
     return 1;
@@ -2822,9 +3015,9 @@ extern void freeobs(obs_t *obs)
 * free memory for navigation data
 * args   : nav_t *nav    IO     navigation data
 *          int   opt     I      option (or of followings)
-*                               (0x01: gps/qzs ephmeris, 0x02: glonass ephemeris,
-*                                0x04: sbas ephemeris,   0x08: precise ephemeris,
-*                                0x10: precise clock     0x20: almanac,
+*                               (0x01: gps/qzs ephemeris, 0x02: glonass ephemeris,
+*                                0x04: sbas ephemeris,    0x08: precise ephemeris,
+*                                0x10: precise clock      0x20: almanac,
 *                                0x40: tec data)
 * return : none
 *-----------------------------------------------------------------------------*/
@@ -2837,7 +3030,6 @@ extern void freenav(nav_t *nav, int opt)
     if (opt&0x10) {free(nav->pclk); nav->pclk=NULL; nav->nc=nav->ncmax=0;}
     if (opt&0x20) {free(nav->alm ); nav->alm =NULL; nav->na=nav->namax=0;}
     if (opt&0x40) {free(nav->tec ); nav->tec =NULL; nav->nt=nav->ntmax=0;}
-    if (opt&0x80) {free(nav->fcb ); nav->fcb =NULL; nav->nf=nav->nfmax=0;}
 }
 /* debug trace functions -----------------------------------------------------*/
 #ifdef TRACE
@@ -2845,7 +3037,7 @@ extern void freenav(nav_t *nav, int opt)
 static FILE *fp_trace=NULL;     /* file pointer of trace */
 static char file_trace[1024];   /* trace file */
 static int level_trace=0;       /* level of trace */
-static unsigned int tick_trace=0; /* tick time at traceopen (ms) */
+static uint32_t tick_trace=0;   /* tick time at traceopen (ms) */
 static gtime_t time_trace={0};  /* time at traceopen */
 static lock_t lock_trace;       /* lock for trace */
 
@@ -2896,6 +3088,10 @@ extern void tracelevel(int level)
 {
     level_trace=level;
 }
+extern int gettracelevel(void)
+{
+    return level_trace;
+}
 extern void trace(int level, const char *format, ...)
 {
     va_list ap;
@@ -2937,7 +3133,7 @@ extern void traceobs(int level, const obsd_t *obs, int n)
         fprintf(fp_trace," (%2d) %s %-3s rcv%d %13.3f %13.3f %13.3f %13.3f %d %d %d %d %x %x %3.1f %3.1f\n",
               i+1,str,id,obs[i].rcv,obs[i].L[0],obs[i].L[1],obs[i].P[0],
               obs[i].P[1],obs[i].LLI[0],obs[i].LLI[1],obs[i].code[0],
-              obs[i].code[1],obs[i].qualL[0],obs[i].qualP[0],obs[i].SNR[0]*0.25,obs[i].SNR[1]*0.25);
+              obs[i].code[1],obs[i].Lstd[0],obs[i].Pstd[0],obs[i].SNR[0]*SNR_UNIT,obs[i].SNR[1]*SNR_UNIT);
     }
     fflush(fp_trace);
 }
@@ -3026,7 +3222,7 @@ extern void tracepclk(int level, const nav_t *nav)
         }
     }
 }
-extern void traceb(int level, const unsigned char *p, int n)
+extern void traceb(int level, const uint8_t *p, int n)
 {
     int i;
     if (!fp_trace||level>level_trace) return;
@@ -3046,7 +3242,7 @@ extern void tracegnav(int level, const nav_t *nav) {}
 extern void tracehnav(int level, const nav_t *nav) {}
 extern void tracepeph(int level, const nav_t *nav) {}
 extern void tracepclk(int level, const nav_t *nav) {}
-extern void traceb  (int level, const unsigned char *p, int n) {}
+extern void traceb  (int level, const uint8_t *p, int n) {}
 
 #endif /* TRACE */
 
@@ -3152,11 +3348,52 @@ extern int expath(const char *path, char *paths[], int nmax)
     
     return n;
 }
+/* generate local directory recursively --------------------------------------*/
+static int mkdir_r(const char *dir)
+{
+    char pdir[1024],*p;
+
+#ifdef WIN32
+    HANDLE h;
+    WIN32_FIND_DATA data;
+    
+    if (!*dir||!strcmp(dir+1,":\\")) return 1;
+    
+    sprintf(pdir,"%.1023s",dir);
+    if ((p=strrchr(pdir,FILEPATHSEP))) {
+        *p='\0';
+        h=FindFirstFile(pdir,&data);
+        if (h==INVALID_HANDLE_VALUE) {
+            if (!mkdir_r(pdir)) return 0;
+        }
+        else FindClose(h);
+    }
+    if (CreateDirectory(dir,NULL)||GetLastError()==ERROR_ALREADY_EXISTS) {
+        return 1;
+    }
+#else
+    FILE *fp;
+    
+    if (!*dir) return 1;
+    
+    sprintf(pdir,"%.1023s",dir);
+    if ((p=strrchr(pdir,FILEPATHSEP))) {
+        *p='\0';
+        if (!(fp=fopen(pdir,"r"))) {
+            if (!mkdir_r(pdir)) return 0;
+        }
+        else fclose(fp);
+    }
+    if (!mkdir(dir,0777)||errno==EEXIST) return 1;
+#endif
+    trace(2,"directory generation error: dir=%s\n",dir);
+    return 0;
+}
 /* create directory ------------------------------------------------------------
-* create directory if not exist
+* create directory if not exists
 * args   : char   *path     I   file path to be saved
 * return : none
-* notes  : not recursive. only one level
+* notes  : recursively.
 *-----------------------------------------------------------------------------*/
 extern void createdir(const char *path)
 {
@@ -3168,17 +3405,13 @@ extern void createdir(const char *path)
     if (!(p=strrchr(buff,FILEPATHSEP))) return;
     *p='\0';
     
-#ifdef WIN32
-    CreateDirectory(buff,NULL);
-#else
-    mkdir(buff,0777);
-#endif
+    mkdir_r(buff);
 }
 /* replace string ------------------------------------------------------------*/
 static int repstr(char *str, const char *pat, const char *rep)
 {
     int len=(int)strlen(pat);
-    char buff[1024],*p,*q,*r;
+    char buff[1024]={'\0'},*p,*q,*r;
     
     for (p=str,r=buff;*p;p=q+len) {
         if (!(q=strstr(p,pat))) break;
@@ -3300,49 +3533,9 @@ extern int reppaths(const char *path, char *rpath[], int nmax, gtime_t ts,
     for (i=0;i<n;i++) trace(3,"reppaths: rpath=%s\n",rpath[i]);
     return n;
 }
-/* satellite carrier wave length -----------------------------------------------
-* get satellite carrier wave lengths
-* args   : int    sat       I   satellite number
-*          int    frq       I   frequency index (0:L1,1:L2,2:L5/3,...)
-*          nav_t  *nav      I   navigation messages
-* return : carrier wave length (m) (0.0: error)
-*-----------------------------------------------------------------------------*/
-extern double satwavelen(int sat, int frq, const nav_t *nav)
-{
-    const double freq_glo[]={FREQ1_GLO,FREQ2_GLO};
-    const double dfrq_glo[]={DFRQ1_GLO,DFRQ2_GLO};
-    int i,sys=satsys(sat,NULL);
-    
-    if (sys==SYS_GLO) {
-        if (0<=frq&&frq<=1) {
-            for (i=0;i<nav->ng;i++) {
-                if (nav->geph[i].sat!=sat) continue;
-                return CLIGHT/(freq_glo[frq]+dfrq_glo[frq]*nav->geph[i].frq);
-            }
-        }
-        else if (frq==2) { /* L3 */
-            return CLIGHT/FREQ3_GLO;
-        }
-    }
-    else if (sys==SYS_CMP) {
-        if      (frq==0) return CLIGHT/FREQ1_CMP; /* B1 */
-        else if (frq==1) return CLIGHT/FREQ2_CMP; /* B2 */
-        else if (frq==2) return CLIGHT/FREQ3_CMP; /* B3 */
-    }
-    else {
-        if      (frq==0) return CLIGHT/FREQ1; /* L1/E1 */
-        else if (frq==1) return CLIGHT/FREQ2; /* L2 */
-        else if (frq==2) return CLIGHT/FREQ5; /* L5/E5a */
-        else if (frq==3) return CLIGHT/FREQ6; /* L6/LEX */
-        else if (frq==4) return CLIGHT/FREQ7; /* E5b */
-        else if (frq==5) return CLIGHT/FREQ8; /* E5a+b */
-        else if (frq==6) return CLIGHT/FREQ9; /* S */
-    }
-    return 0.0;
-}
 /* geometric distance ----------------------------------------------------------
 * compute geometric distance and receiver-to-satellite unit vector
-* args   : double *rs       I   satellilte position (ecef at transmission) (m)
+* args   : double *rs       I   satellite position (ecef at transmission) (m)
 *          double *rr       I   receiver position (ecef at reception) (m)
 *          double *e        O   line-of-sight vector (ecef)
 * return : geometric distance (m) (0>:error/no satellite position)
@@ -3389,7 +3582,7 @@ extern double satazel(const double *pos, const double *e, double *azel)
 * return : none
 * notes  : dop[0]-[3] return 0 in case of dop computation error
 *-----------------------------------------------------------------------------*/
-#define SQRT(x)     ((x)<0.0?0.0:sqrt(x))
+#define SQRT(x)     ((x)<0.0||(x)!=(x)?0.0:sqrt(x))
 
 extern void dops(int ns, const double *azel, double elmin, double *dop)
 {
@@ -3508,6 +3701,12 @@ extern double ionppp(const double *pos, const double *azel, double re,
     }
     return 1.0/sqrt(1.0-rp*rp);
 }
+/* select iono-free linear combination (L1/L2 or L1/L5) ----------------------*/
+extern int seliflc(int optnf,int sys)
+{
+    /* use L1/L5 for Galileo if L5 is enabled */
+    return((optnf==2||sys!=SYS_GAL)?1:2);
+}
 /* troposphere model -----------------------------------------------------------
 * compute tropospheric delay by standard atmosphere and saastamoinen model
 * args   : gtime_t time     I   time
@@ -3519,7 +3718,7 @@ extern double ionppp(const double *pos, const double *azel, double re,
 extern double tropmodel(gtime_t time, const double *pos, const double *azel,
                         double humi)
 {
-    const double temp0=15.0; /* temparature at sea level */
+    const double temp0=15.0; /* temperature at sea level */
     double hgt,pres,temp,e,z,trph,trpw;
     
     if (pos[2]<-100.0||1E4<pos[2]||azel[1]<=0) return 0.0;
@@ -3531,7 +3730,7 @@ extern double tropmodel(gtime_t time, const double *pos, const double *azel,
     temp=temp0-6.5E-3*hgt+273.16;
     e=6.108*humi*exp((17.15*temp-4684.0)/(temp-38.45));
     
-    /* saastamoninen model */
+    /* saastamoinen model */
     z=PI/2.0-azel[1];
     trph=0.0022768*pres/(1.0-0.00266*cos(2.0*pos[0])-0.00028*hgt/1E3)/cos(z);
     trpw=0.002277*(1255.0/temp+0.05)*e/cos(z);
@@ -3649,6 +3848,7 @@ static double interpvar(double ang, const double *var)
 /* receiver antenna model ------------------------------------------------------
 * compute antenna offset by antenna phase center parameters
 * args   : pcv_t *pcv       I   antenna phase center parameters
+*          double *del      I   antenna delta {e,n,u} (m)
 *          double *azel     I   azimuth/elevation for receiver {az,el} (rad)
 *          int     opt      I   option (0:only offset,1:offset+pcv)
 *          double *dant     O   range offsets for each frequency (m)
@@ -3672,7 +3872,7 @@ extern void antmodel(const pcv_t *pcv, const double *del, const double *azel,
         
         dant[i]=-dot(off,e,3)+(opt?interpvar(90.0-azel[1]*R2D,pcv->var[i]):0.0);
     }
-    trace(5,"antmodel: dant=%6.3f %6.3f\n",dant[0],dant[1]);
+    trace(4,"antmodel: dant=%6.3f %6.3f\n",dant[0],dant[1]);
 }
 /* satellite antenna model ------------------------------------------------------
 * compute satellite antenna phase center parameters
@@ -3690,7 +3890,7 @@ extern void antmodel_s(const pcv_t *pcv, double nadir, double *dant)
     for (i=0;i<NFREQ;i++) {
         dant[i]=interpvar(nadir*R2D*5.0,pcv->var[i]);
     }
-    trace(5,"antmodel_s: dant=%6.3f %6.3f\n",dant[0],dant[1]);
+    trace(4,"antmodel_s: dant=%6.3f %6.3f\n",dant[0],dant[1]);
 }
 /* sun and moon position in eci (ref [4] 5.1.1, 5.2.1) -----------------------*/
 static void sunmoonpos_eci(gtime_t tut, double *rsun, double *rmoon)
@@ -3763,53 +3963,23 @@ extern void sunmoonpos(gtime_t tutc, const double *erpv, double *rsun,
     /* eci to ecef transformation matrix */
     eci2ecef(tutc,erpv,U,&gmst_);
     
-    /* sun and moon postion in ecef */
+    /* sun and moon position in ecef */
     if (rsun ) matmul("NN",3,1,3,1.0,U,rs,0.0,rsun );
     if (rmoon) matmul("NN",3,1,3,1.0,U,rm,0.0,rmoon);
     if (gmst ) *gmst=gmst_;
-}
-/* carrier smoothing -----------------------------------------------------------
-* carrier smoothing by Hatch filter
-* args   : obs_t  *obs      IO  raw observation data/smoothed observation data
-*          int    ns        I   smoothing window size (epochs)
-* return : none
-*-----------------------------------------------------------------------------*/
-extern void csmooth(obs_t *obs, int ns)
-{
-    double Ps[2][MAXSAT][NFREQ]={{{0}}},Lp[2][MAXSAT][NFREQ]={{{0}}},dcp;
-    int i,j,s,r,n[2][MAXSAT][NFREQ]={{{0}}};
-    obsd_t *p;
-    
-    trace(3,"csmooth: nobs=%d,ns=%d\n",obs->n,ns);
-    
-    for (i=0;i<obs->n;i++) {
-        p=&obs->data[i]; s=p->sat; r=p->rcv;
-        for (j=0;j<NFREQ;j++) {
-            if (s<=0||MAXSAT<s||r<=0||2<r) continue;
-            if (p->P[j]==0.0||p->L[j]==0.0) continue;
-            if (p->LLI[j]) n[r-1][s-1][j]=0;
-            if (n[r-1][s-1][j]==0) Ps[r-1][s-1][j]=p->P[j];
-            else {
-                dcp=lam_carr[j]*(p->L[j]-Lp[r-1][s-1][j]);
-                Ps[r-1][s-1][j]=p->P[j]/ns+(Ps[r-1][s-1][j]+dcp)*(ns-1)/ns;
-            }
-            if (++n[r-1][s-1][j]<ns) p->P[j]=0.0; else p->P[j]=Ps[r-1][s-1][j];
-            Lp[r-1][s-1][j]=p->L[j];
-        }
-    }
 }
 /* uncompress file -------------------------------------------------------------
 * uncompress (uncompress/unzip/uncompact hatanaka-compression/tar) file
 * args   : char   *file     I   input file
 *          char   *uncfile  O   uncompressed file
 * return : status (-1:error,0:not compressed file,1:uncompress completed)
-* note   : creates uncompressed file in tempolary directory
-*          gzip and crx2rnx commands have to be installed in commands path
+* note   : creates uncompressed file in temporary directory
+*          gzip, tar and crx2rnx commands have to be installed in commands path
 *-----------------------------------------------------------------------------*/
 extern int rtk_uncompress(const char *file, char *uncfile)
 {
     int stat=0;
-    char *p,cmd[2048]="",tmpfile[1024]="",buff[1024],*fname,*dir="";
+    char *p,cmd[64+2048]="",tmpfile[1024]="",buff[1024],*fname,*dir="";
     
     trace(3,"rtk_uncompress: file=%s\n",file);
     
@@ -3857,7 +4027,9 @@ extern int rtk_uncompress(const char *file, char *uncfile)
         stat=1;
     }
     /* extract hatanaka-compressed file by cnx2rnx */
-    else if ((p=strrchr(tmpfile,'.'))&&strlen(p)>3&&(*(p+3)=='d'||*(p+3)=='D')) {
+    else if ((p=strrchr(tmpfile,'.'))&&
+             ((strlen(p)>3&&(*(p+3)=='d'||*(p+3)=='D'))||
+              !strcmp(p,".crx")||!strcmp(p,".CRX"))) {
         
         strcpy(uncfile,tmpfile);
         uncfile[p-tmpfile+3]=*(p+3)=='D'?'O':'o';
@@ -3875,16 +4047,9 @@ extern int rtk_uncompress(const char *file, char *uncfile)
     return stat;
 }
 /* dummy application functions for shared library ----------------------------*/
-#ifdef DLL
-extern int showmsg(char *format,...) {return 0;}
+#if defined(WIN_DLL) || defined(DLL)
+extern int showmsg(const char *format,...) {return 0;}
 extern void settspan(gtime_t ts, gtime_t te) {}
 extern void settime(gtime_t time) {}
 #endif
-
-/* dummy functions for lex extentions ----------------------------------------*/
-#ifndef EXTLEX
-extern int input_lexr(raw_t *raw, unsigned char data) {return 0;}
-extern int input_lexrf(raw_t *raw, FILE *fp) {return 0;}
-extern int gen_lexr(const char *msg, unsigned char *buff) {return 0;}
-#endif /* EXTLEX */
 

@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------
 * tle.c: NORAD TLE (two line element) functions
 *
-*          Copyright (C) 2012-2013 by T.TAKASU, All rights reserved.
+*          Copyright (C) 2012-2020 by T.TAKASU, All rights reserved.
 *
 * references:
 *     [1] F.R.Hoots and R.L.Roehrich, Spacetrack report No.3, Models for
@@ -14,6 +14,7 @@
 * history : 2012/11/01 1.0  new
 *           2013/01/25 1.1  fix bug on binary search
 *           2014/08/26 1.2  fix bug on tle_pos() to get tle by satid or desig
+*           2020/11/30 1.3  fix problem on duplicated names in a satellite
 *-----------------------------------------------------------------------------*/
 #include "rtklib.h"
 
@@ -53,7 +54,7 @@ static void SGP4_STR3(double tsince, const tled_t *data, double *rs)
     double cosnok,xmx,xmy,ux,uy,uz,vx,vy,vz,x,y,z,xdot,ydot,zdot;
     double temp,temp1,temp2,temp3,temp4,temp5,temp6,tempa,tempe,templ;
     int i,isimp;
-    
+
     xnodeo=data->OMG*DE2RA;
     omegao=data->omg*DE2RA;
     xmo=data->M*DE2RA;
@@ -89,7 +90,7 @@ static void SGP4_STR3(double tsince, const tled_t *data, double *rs)
     */
     isimp=0;
     if ((aodp*(1.0-eo)/AE)<(220.0/XKMPER+AE)) isimp=1;
-    
+
     /* for perigee below 156 km, the values of s and qoms2t are altered */
     s4=S;
     qoms24=QOMS2T;
@@ -142,7 +143,7 @@ static void SGP4_STR3(double tsince, const tled_t *data, double *rs)
     delmo=pow(1.0+eta*cos(xmo),3.0);
     sinmo=sin(xmo);
     x7thm1=7.0*theta2-1.0;
-    
+
     if (isimp!=1) {
         c1sq=c1*c1;
         d2=4.0*aodp*tsi*c1sq;
@@ -184,7 +185,7 @@ static void SGP4_STR3(double tsince, const tled_t *data, double *rs)
     xl=xmp+omega+xnode+xnodp*templ;
     beta=sqrt(1.0-e*e);
     xn=XKE/pow(a,1.5);
-    
+
     /* long period periodics */
     axn=e*cos(omega);
     temp=1.0/(a*beta*beta);
@@ -192,7 +193,7 @@ static void SGP4_STR3(double tsince, const tled_t *data, double *rs)
     aynl=temp*aycof;
     xlt=xl+xll;
     ayn=e*sin(omega)+aynl;
-    
+
     /* solve keplers equation */
     capu=fmod(xlt-xnode,TWOPI);
     temp2=capu;
@@ -228,7 +229,7 @@ static void SGP4_STR3(double tsince, const tled_t *data, double *rs)
     temp=1.0/pl;
     temp1=CK2*temp;
     temp2=temp1*temp;
-    
+
     /* update for short periodics */
     rk=r*(1.0-1.5*temp2*betal*x3thm1)+0.5*temp1*x1mth2*cos2u;
     uk=u-0.25*temp2*x7thm1*sin2u;
@@ -236,7 +237,7 @@ static void SGP4_STR3(double tsince, const tled_t *data, double *rs)
     xinck=xincl+1.5*temp2*cosio*sinio*cos2u;
     rdotk=rdot-xn*temp1*x1mth2*sin2u;
     rfdotk=rfdot+xn*temp1*(x1mth2*cos2u+1.5*x3thm1);
-    
+
     /* orientation vectors */
     sinuk=sin(uk);
     cosuk=cos(uk);
@@ -252,7 +253,7 @@ static void SGP4_STR3(double tsince, const tled_t *data, double *rs)
     vx=xmx*cosuk-cosnok*sinuk;
     vy=xmy*cosuk-sinnok*sinuk;
     vz=sinik*cosuk;
-    
+
     /* position and velocity */
     x=rk*ux;
     y=rk*uy;
@@ -260,7 +261,7 @@ static void SGP4_STR3(double tsince, const tled_t *data, double *rs)
     xdot=rdotk*ux+rfdotk*vx;
     ydot=rdotk*uy+rfdotk*vy;
     zdot=rdotk*uz+rfdotk*vz;
-    
+
     rs[0]=x*XKMPER/AE*1E3; /* (m) */
     rs[1]=y*XKMPER/AE*1E3;
     rs[2]=z*XKMPER/AE*1E3;
@@ -281,9 +282,9 @@ static void chop(char *buff)
 static int checksum(const char *buff)
 {
     int i,cs=0;
-    
+
     if (strlen(buff)<69) return 0;
-    
+
     for (i=0;i<68;i++) {
         if ('0'<=buff[i]&&buff[i]<='9') cs+=(int)(buff[i]-'0');
         else if (buff[i]=='-') cs+=1;
@@ -294,16 +295,16 @@ static int checksum(const char *buff)
 static int decode_line1(const char *buff, tled_t *data)
 {
     double year,doy,nddot,exp1,bstar,exp2,ep[6]={2000,1,1};
-    
+
     strncpy(data->satno,buff+2,5);       /* satellite number */
     data->satno[5]='\0';
     chop(data->satno);
-    
+
     data->satclass=buff[7];              /* satellite classification */
     strncpy(data->desig,buff+9,8);       /* international designator */
     data->desig[8]='\0';
     chop(data->desig);
-    
+
     year      =str2num(buff,18, 2);      /* epoch year */
     doy       =str2num(buff,20,12);      /* epoch day of year */
     data->ndot=str2num(buff,33,10);      /* 1st time derivative of n */
@@ -315,10 +316,10 @@ static int decode_line1(const char *buff, tled_t *data)
     data->eleno=(int)str2num(buff,64,4); /* ephemeris number */
     data->nddot=nddot*1E-5*pow(10.0,exp1);
     data->bstar=bstar*1E-5*pow(10.0,exp2);
-    
+
     ep[0]=year+(year<57.0?2000.0:1900.0);
     data->epoch=timeadd(epoch2time(ep),(doy-1.0)*86400.0);
-    
+
     data->inc=data->OMG=data->ecc=data->omg=data->M=data->n=0.0;
     data->rev=0;
     return 1;
@@ -327,11 +328,11 @@ static int decode_line1(const char *buff, tled_t *data)
 static int decode_line2(const char *buff, tled_t *data)
 {
     char satno[16];
-    
+
     strncpy(satno,buff+2,5);             /* satellite number */
     satno[5]='\0';
     chop(satno);
-    
+
     data->inc=str2num(buff, 8, 8);       /* inclination (deg) */
     data->OMG=str2num(buff,17, 8);       /* RAAN (deg) */
     data->ecc=str2num(buff,26, 7)*1E-7;  /* eccentricity */
@@ -339,7 +340,7 @@ static int decode_line2(const char *buff, tled_t *data)
     data->M  =str2num(buff,43, 8);       /* mean anomaly (deg) */
     data->n  =str2num(buff,52,11);       /* mean motion (rev/day) */
     data->rev=(int)str2num(buff,63,5);   /* revolution number */
-    
+
     if (strcmp(satno,data->satno)) {
         trace(2,"tle satno mismatch: %s %s\n",data->satno,satno);
         return 0;
@@ -354,10 +355,10 @@ static int decode_line2(const char *buff, tled_t *data)
 static int add_data(tle_t *tle, const tled_t *data)
 {
     tled_t *tle_data;
-    
+
     if (tle->n>=tle->nmax) {
         tle->nmax=tle->nmax<=0?1024:tle->nmax*2;
-        
+
         if (!(tle_data=(tled_t *)realloc(tle->data,sizeof(tled_t)*tle->nmax))) {
             trace(1,"tle malloc error\n");
             free(tle->data); tle->data=NULL; tle->n=tle->nmax=0;
@@ -390,27 +391,27 @@ extern int tle_read(const char *file, tle_t *tle)
     tled_t data={{0}};
     char *p,buff[256];
     int line=0;
-    
+
     if (!(fp=fopen(file,"r"))) {
         trace(2,"tle file open error: %s\n",file);
         return 0;
     }
     while (fgets(buff,sizeof(buff),fp)) {
-        
+
         /* delete comments */
         if ((p=strchr(buff,'#'))) *p='\0';
         chop(buff);
-        
+
         if (buff[0]=='1'&&checksum(buff)) {
-            
+
             /* decode TLE line 1 */
             if (decode_line1(buff,&data)) line=1;
         }
         else if (line==1&&buff[0]=='2'&&checksum(buff)) {
-            
+
             /* decode TLE line 2 */
             if (!decode_line2(buff,&data)) continue;
-            
+
             /* add TLE data */
             if (!add_data(tle,&data)) {
                 fclose(fp);
@@ -420,18 +421,19 @@ extern int tle_read(const char *file, tle_t *tle)
             data.alias[0]='\0';
         }
         else if (buff[0]) {
-            
+
             /* satellite name in three line format */
-            strcpy(data.name,buff);
-            
+            strcpy(data.alias,buff);
+
             /* omit words in parentheses */
-            if ((p=strchr(data.name,'('))) *p='\0';
-            chop(data.name);
+            if ((p=strchr(data.alias,'('))) *p='\0';
+            chop(data.alias);
             line=0;
+
         }
     }
     fclose(fp);
-    
+
     /* sort tle data by satellite name */
     if (tle->n>0) qsort(tle->data,tle->n,sizeof(tled_t),cmp_tle_data);
     return 1;
@@ -454,22 +456,23 @@ extern int tle_read(const char *file, tle_t *tle)
 extern int tle_name_read(const char *file, tle_t *tle)
 {
     FILE *fp;
+    tled_t data;
     char *p,buff[256],name[256],satno[256],desig[256];
     int i;
-    
+
     if (!(fp=fopen(file,"r"))) {
         trace(2,"tle satellite name file open error: %s\n",file);
         return 0;
     }
     while (fgets(buff,sizeof(buff),fp)) {
-        
+
         if ((p=strchr(buff,'#'))) *p='\0';
-        
+
         desig[0]='\0';
-        
+
         if (sscanf(buff,"%s %s %s",name,satno,desig)<2) continue;
         satno[5]='\0';
-        
+
         for (i=0;i<tle->n;i++) {
             if (!strcmp(tle->data[i].satno,satno)||
                 !strcmp(tle->data[i].desig,desig)) break;
@@ -478,11 +481,21 @@ extern int tle_name_read(const char *file, tle_t *tle)
             trace(4,"no tle data: satno=%s desig=%s\n",satno,desig);
             continue;
         }
-        strncpy(tle->data[i].name,name,31);
-        tle->data[i].name[31]='\0';
+        if (!*tle->data[i].name) {
+            strncpy(tle->data[i].name,name,31);
+            tle->data[i].name[31]='\0';
+        }
+        else {
+            data=tle->data[i];
+            strncpy(data.name,name,31);
+            data.name[31]='\0';
+            if (!add_data(tle,&data)) {
+                break;
+            }
+        }
     }
     fclose(fp);
-    
+
     /* sort tle data by satellite name */
     if (tle->n>0) qsort(tle->data,tle->n,sizeof(tled_t),cmp_tle_data);
     return 1;
@@ -492,7 +505,7 @@ extern int tle_name_read(const char *file, tle_t *tle)
 * args   : gtime_t time     I   time (GPST)
 *          char   *name     I   satellite name           ("": not specified)
 *          char   *satno    I   satellite catalog number ("": not specified)
-*          char   *desig    I   international designaor  ("": not specified)
+*          char   *desig    I   international designator ("": not specified)
 *          tle_t  *tle      I   TLE data
 *          erp_t  *erp      I   EOP data (NULL: not used)
 *          double *rs       O   sat position/velocity {x,y,z,vx,vy,vz} (m,m/s)
@@ -508,12 +521,14 @@ extern int tle_pos(gtime_t time, const char *name, const char *satno,
     double tsince,rs_tle[6],rs_pef[6],gmst;
     double R1[9]={0},R2[9]={0},R3[9]={0},W[9],erpv[5]={0};
     int i=0,j,k,stat=1;
-    
-    /* binary search by satellite name */
+
+    /* binary search by satellite name or alias if name is empty */
     if (*name) {
         for (i=j=0,k=tle->n-1;j<=k;) {
             i=(j+k)/2;
-            if (!(stat=strcmp(name,tle->data[i].name))) break;
+            if (!(stat=strcmp(name,tle->data[i].name)) ||
+                ( (tle->data[i].name[0]=='\0') &&
+                 !(stat=strcmp(name,tle->data[i].alias)))) break;
             if (stat<0) k=i-1; else j=i+1;
         }
     }
@@ -530,19 +545,19 @@ extern int tle_pos(gtime_t time, const char *name, const char *satno,
         return 0;
     }
     tutc=gpst2utc(time);
-    
+
     /* time since epoch (min) */
     tsince=timediff(tutc,tle->data[i].epoch)/60.0;
-    
+
     /* SGP4 model propagator by STR#3 */
     SGP4_STR3(tsince,tle->data+i,rs_tle);
-    
+
     /* erp values */
     if (erp) geterp(erp,time,erpv);
-    
+
     /* GMST (rad) */
     gmst=utc2gmst(tutc,erpv[2]);
-    
+
     /* TEME (true equator, mean eqinox) -> ECEF (ref [2] IID, Appendix C) */
     R1[0]=1.0; R1[4]=R1[8]=cos(-erpv[1]); R1[7]=sin(-erpv[1]); R1[5]=-R1[7];
     R2[4]=1.0; R2[0]=R2[8]=cos(-erpv[0]); R2[2]=sin(-erpv[0]); R2[6]=-R2[2];

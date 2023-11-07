@@ -16,8 +16,6 @@
 *-----------------------------------------------------------------------------*/
 #include "rtklib.h"
 
-static const char rcsid[]="$Id: lambda.c,v 1.1 2008/07/17 21:48:06 ttaka Exp $";
-
 /* constants/macros ----------------------------------------------------------*/
 
 #define LOOPMAX     10000           /* maximum count of search loop */
@@ -92,10 +90,10 @@ static void reduction(int n, double *L, double *D, double *Z)
 /* modified lambda (mlambda) search (ref. [2]) -------------------------------
 * args   : n      I  number of float parameters
 *          m      I  number of fixed solution
-		   L,D    I  transformed covariance matrix 
+           L,D    I  transformed covariance matrix
            zs     I  transformed double-diff phase biases
-		   zn     O  fixed solutions
-		   s      O  sum of residuals for fixed solutions					*/
+           zn     O  fixed solutions
+           s      O  sum of residuals for fixed solutions                    */
 static int search(int n, int m, const double *L, const double *D,
                   const double *zs, double *zn, double *s)
 {
@@ -106,8 +104,8 @@ static int search(int n, int m, const double *L, const double *D,
     k=n-1; dist[k]=0.0;
     zb[k]=zs[k];
     z[k]=ROUND(zb[k]);
-	y=zb[k]-z[k];
-	step[k]=SGN(y);  /* step towards closest integer */
+    y=zb[k]-z[k];
+    step[k]=SGN(y);  /* step towards closest integer */
     for (c=0;c<LOOPMAX;c++) {
         newdist=dist[k]+y*y/D[k];  /* newdist=sum(((z(j)-zb(j))^2/d(j))) */
         if (newdist<maxdist) {
@@ -118,8 +116,8 @@ static int search(int n, int m, const double *L, const double *D,
                     S[k+i*n]=S[k+1+i*n]+(z[k+1]-zb[k+1])*L[k+1+i*n];
                 zb[k]=zs[k]+S[k+k*n];
                 z[k]=ROUND(zb[k]); /* next valid integer */
-				y=zb[k]-z[k];
-				step[k]=SGN(y);
+                y=zb[k]-z[k];
+                step[k]=SGN(y);
             }
             /* Case 2: store the found candidate and try next valid integer */
             else {
@@ -137,8 +135,8 @@ static int search(int n, int m, const double *L, const double *D,
                     maxdist=s[imax];
                 }
                 z[0]+=step[0]; /* next valid integer */
-				y=zb[0]-z[0];
-				step[0]=-step[0]-SGN(step[0]);
+                y=zb[0]-z[0];
+                step[0]=-step[0]-SGN(step[0]);
             }
         }
         /* Case 3: exit or move up */
@@ -147,8 +145,8 @@ static int search(int n, int m, const double *L, const double *D,
             else {
                 k++;  /* move up */
                 z[k]+=step[k];  /* next valid integer */
-				y=zb[k]-z[k];
-				step[k]=-step[k]-SGN(step[k]);
+                y=zb[k]-z[k];
+                step[k]=-step[k]-SGN(step[k]);
             }
         }
     }
@@ -163,7 +161,7 @@ static int search(int n, int m, const double *L, const double *D,
     
     if (c>=LOOPMAX) {
         fprintf(stderr,"%s : search loop count overflow\n",__FILE__);
-        return -1;
+        return -2;
     }
     return 0;
 }
@@ -188,7 +186,7 @@ extern int lambda(int n, int m, const double *a, const double *Q, double *F,
     if (n<=0||m<=0) return -1;
     L=zeros(n,n); D=mat(n,1); Z=eye(n); z=mat(n,1); E=mat(n,m);
     
-    /* LD (lower diaganol) factorization (Q=L'*diag(D)*L) */
+    /* LD (lower diagonal) factorization (Q=L'*diag(D)*L) */
     if (!(info=LD(n,Q,L,D))) {
         
         /* lambda reduction (z=Z'*a, Qz=Z'*Q*Z=L'*diag(D)*L) */
@@ -196,8 +194,8 @@ extern int lambda(int n, int m, const double *a, const double *Q, double *F,
         matmul("TN",n,1,n,1.0,Z,a,0.0,z); /* z=Z'*a */
         
         /* mlambda search 
-		    z = transformed double-diff phase biases
-			L,D = transformed covariance matrix */
+            z = transformed double-diff phase biases
+            L,D = transformed covariance matrix */
         if (!(info=search(n,m,L,D,z,E,s))) {  /* returns 0 if no error */
             
             info=solve("T",Z,E,n,m,F); /* F=Z'\E */
