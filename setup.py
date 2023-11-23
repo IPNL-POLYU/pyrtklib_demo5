@@ -31,7 +31,7 @@ class BuildExt(build_ext):
 
         config = "Debug" if self.debug else "Release"
         cmake_args = [
-            "-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=" + str(extdir.parent.absolute()),
+            "-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=" + str(extdir.parent.absolute())+"/pyrtklib5",
             "-DCMAKE_BUILD_TYPE=" + config,
             "-DPYTHON_INCLUDE_DIR="+pyinc
         ]
@@ -62,14 +62,14 @@ class BuildExt(build_ext):
 pyrtklib5 = CMakeExtension("pyrtklib5")
 
 setup(name="pyrtklib5",
-      version="0.2.4",
+      version="0.2.5",
       description="This is a python binding for rtklib_demo5",
       author="Runzhi Hu",
       author_email = "run-zhi.hu@connect.polyu.hk",
       url = "https://github.com/IPNL-POLYU/pyrtklib_demo5",
       packages=["pyrtklib5"],
       package_data={
-        'pyrtklib5':['pyrtklib5.pyi']
+        'pyrtklib5':['pyrtklib5.pyi','__init__.py']
       },
       ext_modules=[pyrtklib5],  
       cmdclass={"build_ext": BuildExt}
