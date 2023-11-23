@@ -1,6 +1,11 @@
 # PyRTKLIB -- A bridge between AI and GNSS.
 
 ## News
+
+### 2023.11.23 v0.2.5 Optimize the folder structure
+
+In previous versions, the .so file is directly in site-packages folder, which is disgusting. To let the code editor can make use of the .pyi, the .so file is moved, and is loaded by the init.py file now.
+
 ### 2023.11.07 v0.2.4 Update the rtklib to demo5 b34h
 
 Update the base rtklib version to demo5 b34h
