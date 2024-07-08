@@ -62,7 +62,7 @@ class BuildExt(build_ext):
 pyrtklib5 = CMakeExtension("pyrtklib5")
 
 setup(name="pyrtklib5",
-      version="0.2.5",
+      version="0.2.6",
       description="This is a python binding for rtklib_demo5",
       author="Runzhi Hu",
       author_email = "run-zhi.hu@connect.polyu.hk",
