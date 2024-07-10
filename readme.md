@@ -2,6 +2,20 @@
 
 ## News
 
+### 2024.07.10 Add windows support
+
+The release packages now are built with github actions. And windows support is testing. They are available on linux, macos, and windows now. If you find any bug, please submit issues.
+
+| Python | Linux(After 2010) | Macos Sonoma(M1) | Macos Ventura(Intel)| Windows |
+| :----: | :----: | :----: | :----: | :----: |
+| 3.6 | &#x274C; | &#x274C; | &#x274C; |  &#x2705; |
+| 3.7 | &#x2705; | &#x274C; | &#x274C; |  &#x2705; |
+| 3.8 | &#x2705; | &#x2705; | &#x2705; |  &#x2705; |
+| 3.9 | &#x2705; | &#x2705; | &#x2705; |  &#x2705; |
+| 3.10 | &#x2705; | &#x2705; | &#x2705; | &#x2705; |
+| 3.11 | &#x2705; | &#x2705; | &#x2705; | &#x2705; |
+
+
 ### 2024.07.08 v0.2.6 Bug fix
 
 * In cbind.h, I forgot to allocate one more byte for string to store '\0', thus segmentation fault may occur in function "convertChar" (I met several times). Besides, in convertType, the copy size is not correct and only the first object is copied. All the bugs now have been fixed.
@@ -98,18 +112,17 @@ If you just need the result, please refer to the [post position example](https:/
 ```
 pip install pyrtklib5
 ```
-The package relies on both system version and python version. Currently, we provide the pre-compiled wheel package on Linux and Macos. The Linux version is compiled for manylinux2010 (GLIBC after 2.12). Limited to hardware, the Macos version can only be compiled on two devices -- Macos Ventura Intel and Macos Sonoma M1. (If you can help us compile on more platforms, we would appreciate it.) Here is a table for the support information.
+The package relies on both system version and python version. The release packages are built with github actions. They are available on linux, macos, and windows now.
 
 
-| Python | Linux(After 2010) | Macos Sonoma(M1) | Macos Ventura(Intel)| 
-| :----: | :----: | :----: | :----: |
-| 3.6 | &#x2705; | &#x274C; | &#x274C; |
-| 3.7 | &#x2705; | &#x274C; | &#x274C; |
-| 3.8 | &#x2705; | &#x274C; | &#x274C; |
-| 3.9 | &#x2705; | &#x2705; | &#x2705; |
-| 3.10 | &#x2705; | &#x274C; | &#x2705; |
-| 3.11 | &#x274C; | &#x274C; | &#x2705; |
-
+| Python | Linux(After 2010) | Macos Sonoma(M1) | Macos Ventura(Intel)| Windows |
+| :----: | :----: | :----: | :----: | :----: |
+| 3.6 | &#x274C; | &#x274C; | &#x274C; |  &#x2705; |
+| 3.7 | &#x2705; | &#x274C; | &#x274C; |  &#x2705; |
+| 3.8 | &#x2705; | &#x2705; | &#x2705; |  &#x2705; |
+| 3.9 | &#x2705; | &#x2705; | &#x2705; |  &#x2705; |
+| 3.10 | &#x2705; | &#x2705; | &#x2705; | &#x2705; |
+| 3.11 | &#x2705; | &#x2705; | &#x2705; | &#x2705; |
 
 ### Manually Install
 Installation of pyrtklib is very easy, just clone the code and install it.
