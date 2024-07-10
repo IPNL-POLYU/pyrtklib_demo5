@@ -93,11 +93,11 @@ jobs:
         name: python-wheels
         path: wheelhouse/*.whl
 
-    - name: Get version from setup.py
-      id: get_version
-      run: |
-        VERSION=$(python setup.py --version)
-        echo "name=VERSION::$VERSION" >> $GITHUB_OUTPUT
+    # - name: Get version from setup.py
+    #   id: get_version
+    #   run: |
+    #     VERSION=$(python setup.py --version)
+    #     echo "name=VERSION::$VERSION" >> $GITHUB_OUTPUT
 
 
     # - name: Create GitHub release
