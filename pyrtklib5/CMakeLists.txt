@@ -16,6 +16,16 @@ include_directories(${PYBIND11_INCLUDE_DIRS})
 
 
 ADD_DEFINITIONS(-DENACMP -DENAGAL -DENAGLO -DENAQZS -DENAIRN -DTRACE -DDLL -DEBUG)
+
+
+if(DARWIN)
+ADD_DEFINITIONS(-DDARWIN)
+endif()
+
+if(WIN32)
+ADD_DEFINITIONS(-DWIN32)
+endif()
+
 set(CMAKE_VERBOSE_MAKEFILE ON)
 set(LIBRARY OFF)
 add_compile_options(-fno-stack-protector)
@@ -38,6 +48,11 @@ else()
     AUX_SOURCE_DIRECTORY(${PROJECT_SOURCE_DIR}/rtksrc/rcv rcv_src)
     add_library(pyrtklib5 MODULE ${RTK_src} ${rcv_src} pyrtklib5.cpp) 
     # pybind11_add_module(pyrtklib NO_EXTRAS ${RTK_src} ${rcv_src} pyrtklib.cpp)
-    set_target_properties(pyrtklib5 PROPERTIES PREFIX "")
-    target_link_libraries(pyrtklib5 PUBLIC pybind11::module m pthread)
+    if(WIN32)
+        set_target_properties(pyrtklib5 PROPERTIES PREFIX "" SUFFIX ".pyd")
+        target_link_libraries(pyrtklib5 PUBLIC pybind11::module winmm ws2_32)
+    else()
+        set_target_properties(pyrtklib5 PROPERTIES PREFIX "")
+        target_link_libraries(pyrtklib5 PUBLIC pybind11::module m pthread)
+    endif()
 endif()
