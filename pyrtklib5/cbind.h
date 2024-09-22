@@ -29,6 +29,31 @@ namespace py = pybind11;
     .def("set",[](Arr2D<Type> &arr,Arr2D<Type> *nsrc){arr.src = (Type*)nsrc->src;})\
     .def("print",[](Arr2D<Type> &arr){std::cout<<(arr.src)<<std::endl;});
 
+class FileWrapper {
+    public:
+        FileWrapper(const char* filename, const char* mode) {
+            file = fopen(filename, mode);
+        }
+
+        ~FileWrapper() {
+            if (file) {
+                fclose(file);
+            }
+        }
+
+        FILE* get() const {
+            return file;
+        }
+
+        void cleareof(){
+            clearerr(file);
+        }
+
+    public:
+        FILE* file;
+};
+
+
 
 template <class T>
 class Arr1D{
