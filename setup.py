@@ -82,5 +82,7 @@ setup(name="pyrtklib5",
         'pyrtklib5':['pyrtklib5.pyi','__init__.py']
       },
       ext_modules=[pyrtklib5],  
-      cmdclass={"build_ext": BuildExt}
+      cmdclass={"build_ext": BuildExt},
+      long_description=open('readme.md').read(),
+      long_description_content_type='text/markdown',
 )
