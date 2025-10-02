@@ -154,7 +154,7 @@ static int sisaindex(double value)
 /* decode BINEX mesaage 0x00: site metadata ----------------------------------*/
 static int decode_bnx_00(raw_t *raw, uint8_t *buff, int len)
 {
-    const static double gpst0[]={1980,1,6,0,0,0};
+    static const double gpst0[]={1980,1,6,0,0,0};
     double x[3];
     char *msg,str[MAXANT];
     uint8_t *p=buff;
@@ -168,7 +168,8 @@ static int decode_bnx_00(raw_t *raw, uint8_t *buff, int len)
     
     msg=raw->msgtype+strlen(raw->msgtype);
     if (raw->outtype) {
-        msg+=sprintf(msg," time=%s src=%d",time_str(raw->time,0),src);
+        char tstr[40];
+        msg+=sprintf(msg," time=%s src=%u",time2str(raw->time,tstr,0),src);
     }
     while (p-buff<len) {
         p+=getbnxi(p,&fid);
@@ -183,7 +184,7 @@ static int decode_bnx_00(raw_t *raw, uint8_t *buff, int len)
                 msg+=sprintf(msg," [%02x]%s",fid,str);
             }
             if      (fid==0x08) strcpy(raw->sta.name   ,str);
-            else if (fid==0x09) strcpy(raw->sta.marker ,str);
+            else if (fid==0x09) strcpy(raw->sta.markerno, str);
             else if (fid==0x17) strcpy(raw->sta.antdes ,str);
             else if (fid==0x18) strcpy(raw->sta.antsno ,str);
             else if (fid==0x19) strcpy(raw->sta.rectype,str);
@@ -324,7 +325,7 @@ static int decode_bnx_01_02(raw_t *raw, uint8_t *buff, int len)
         geph.pos[2]=R8(p)*1E3; p+=8;
         geph.vel[2]=R8(p)*1E3; p+=8;
         geph.acc[2]=R8(p)*1E3; p+=8;
-        geph.svh   =U1(p)&0x1; p+=1; /* MSB of Bn */
+        geph.svh   =U1(p)&0x7; p+=1; // Extended SVH (Cn_a, CN, Bn)
         geph.frq   =I1(p);     p+=1;
         geph.age   =U1(p);     p+=1;
         leap       =U1(p);     p+=1;
@@ -528,7 +529,7 @@ static int decode_bnx_01_05(raw_t *raw, uint8_t *buff, int len)
     }
     if (!(sat=satno(SYS_CMP,prn))) {
         trace(2,"BINEX 0x01-05: satellite error prn=%d\n",prn);
-        return 0;
+        return -1;
     }
     eph.sat=sat;
     eph.A=SQR(sqrtA);
@@ -599,7 +600,7 @@ static int decode_bnx_01_06(raw_t *raw, uint8_t *buff, int len)
     }
     if (!(sat=satno(SYS_QZS,prn))) {
         trace(2,"BINEX 0x01-06: satellite error prn=%d\n",prn);
-        return 0;
+        return -1;
     }
     eph.sat=sat;
     eph.A=SQR(sqrtA);
@@ -662,7 +663,7 @@ static int decode_bnx_01_07(raw_t *raw, uint8_t *buff, int len)
     }
     if (!(sat=satno(SYS_IRN,prn))) {
         trace(2,"BINEX 0x01-07: satellite error prn=%d\n",prn);
-        return 0;
+        return -1;
     }
     eph.sat=sat;
     eph.A=SQR(sqrtA);
@@ -976,8 +977,8 @@ static uint8_t *decode_bnx_7f_05_obs(raw_t *raw, uint8_t *buff, int sat,
         }
         if (k<0) {
             data->P[i]=data->L[i]=0.0;
-            data->D[i]=0.0f;
-            data->SNR[i]=data->LLI[i]=0;
+            data->D[i]=data->SNR[i]=0.0;
+            data->LLI[i]=0;
             data->code[i]=CODE_NONE;
         }
         else {
@@ -985,7 +986,7 @@ static uint8_t *decode_bnx_7f_05_obs(raw_t *raw, uint8_t *buff, int sat,
             data->P[i]=range[k];
             data->L[i]=phase[k]*freq/CLIGHT;
             data->D[i]=dopp[k];
-            data->SNR[i]=(uint16_t)(cnr[k]/SNR_UNIT+0.5);
+            data->SNR[i]=cnr[k];
             data->code[i]=codes[code[k]];
             data->LLI[i]=slip[k]?1:0;
             mask[k]=1;
@@ -997,8 +998,8 @@ static uint8_t *decode_bnx_7f_05_obs(raw_t *raw, uint8_t *buff, int sat,
         }
         if (k>=nobs) {
             data->P[i]=data->L[i]=0.0;
-            data->D[i]=0.0f;
-            data->SNR[i]=data->LLI[i]=0;
+            data->D[i]=data->SNR[i]=0.0;
+            data->LLI[i]=0;
             data->code[i]=CODE_NONE;
         }
         else {
@@ -1006,7 +1007,7 @@ static uint8_t *decode_bnx_7f_05_obs(raw_t *raw, uint8_t *buff, int sat,
             data->P[i]=range[k];
             data->L[i]=phase[k]*freq/CLIGHT;
             data->D[i]=dopp[k];
-            data->SNR[i]=(uint16_t)(cnr[k]/SNR_UNIT+0.5);
+            data->SNR[i]=cnr[k];
             data->code[i]=codes[code[k]];
             data->LLI[i]=slip[k]?1:0;
             mask[k]=1;
@@ -1080,7 +1081,7 @@ static int decode_bnx_7f_05(raw_t *raw, uint8_t *buff, int len)
 /* decode BINEX mesaage 0x7f: GNSS data prototyping --------------------------*/
 static int decode_bnx_7f(raw_t *raw, uint8_t *buff, int len)
 {
-    const static double gpst0[]={1980,1,6,0,0,0};
+    static const double gpst0[]={1980,1,6,0,0,0};
     char *msg;
     uint8_t *p=buff;
     uint32_t srec,min,msec;
@@ -1092,7 +1093,8 @@ static int decode_bnx_7f(raw_t *raw, uint8_t *buff, int len)
     
     if (raw->outtype) {
         msg=raw->msgtype+strlen(raw->msgtype);
-        sprintf(msg," subrec=%02X time%s",srec,time_str(raw->time,3));
+        char tstr[40];
+        sprintf(msg," subrec=%02X time%s",srec,time2str(raw->time,tstr,3));
     }
     switch (srec) {
         case 0x00: return decode_bnx_7f_00(raw,buff+7,len-7);

@@ -32,6 +32,7 @@
 *                           delete API strsvrsetsrctbl()
 *                           use integer types in stdint.h
 *-----------------------------------------------------------------------------*/
+#define _POSIX_C_SOURCE 200809L
 #include "rtklib.h"
 
 /* test observation data message ---------------------------------------------*/
@@ -82,7 +83,8 @@ extern strconv_t *strconvnew(int itype, int otype, const char *msgs, int staid,
     
     conv->nmsg=0;
     strcpy(buff,msgs);
-    for (p=strtok(buff,",");p;p=strtok(NULL,",")) {
+    char *q;
+    for (p=strtok_r(buff,",",&q);p;p=strtok_r(NULL,",",&q)) {
        tint=0.0;
        if (sscanf(p,"%d(%lf)",&msg,&tint)<1) continue;
        conv->msgs[conv->nmsg]=msg;
@@ -464,8 +466,13 @@ static void periodic_cmd(int cycle, const char *cmd, stream_t *stream)
         period=0;
         if ((r=strrchr(msg,'#'))) {
             sscanf(r,"# %d",&period);
-            *r='\0';
-            while (*--r==' ') *r='\0'; /* delete tail spaces */
+            size_t end=r-msg;
+            msg[end]='\0';
+            /* Delete tailing spaces */
+            while (end>0) {
+              if (msg[end-1]!=' ') break;
+              msg[--end]='\0';
+            }
         }
         if (period<=0) period=1000;
         if (*msg&&cycle%period==0) {
@@ -510,11 +517,11 @@ static void *strsvrthread(void *arg)
             /* write data to log stream */
             strwrite(svr->strlog,svr->buff,n);
             
-            lock(&svr->lock);
+            rtklib_lock(&svr->lock);
             for (i=0;i<n&&svr->npb<svr->buffsize;i++) {
                 svr->pbuf[svr->npb++]=svr->buff[i];
             }
-            unlock(&svr->lock);
+            rtklib_unlock(&svr->lock);
         }
         for (i=1;i<svr->nstr;i++) {
             
@@ -579,7 +586,7 @@ extern void strsvrinit(strsvr_t *svr, int nout)
     svr->nstr=i;
     for (i=0;i<16;i++) svr->conv[i]=NULL;
     svr->thread=0;
-    initlock(&svr->lock);
+    rtklib_initlock(&svr->lock);
 }
 /* start stream server ---------------------------------------------------------
 * start stream server
@@ -631,11 +638,11 @@ extern void strsvrinit(strsvr_t *svr, int nout)
 *          double *nmeapos  I   nmea request position (ecef) (m) (NULL: no)
 * return : status (0:error,1:ok)
 *-----------------------------------------------------------------------------*/
-extern int strsvrstart(strsvr_t *svr, int *opts, int *strs, char **paths,
-                       char **logs, strconv_t **conv, char **cmds,
-                       char **cmds_periodic, const double *nmeapos)
+extern int strsvrstart(strsvr_t *svr, int *opts, int *strs, const char **paths,
+                       const char **logs, strconv_t **conv, const char **cmds,
+                       const char **cmds_periodic, const double *nmeapos)
 {
-    int i,rw,stropt[5]={0};
+    int i,rw,stropt[8]={0};
     char file1[MAXSTRPATH],file2[MAXSTRPATH],*p;
     
     tracet(3,"strsvrstart:\n");
@@ -659,7 +666,8 @@ extern int strsvrstart(strsvr_t *svr, int *opts, int *strs, char **paths,
     
     if (!(svr->buff=(uint8_t *)malloc(svr->buffsize))||
         !(svr->pbuf=(uint8_t *)malloc(svr->buffsize))) {
-        free(svr->buff); free(svr->pbuf);
+        free(svr->buff);
+        svr->buff = svr->pbuf = NULL;
         return 0;
     }
     /* open streams */
@@ -669,6 +677,8 @@ extern int strsvrstart(strsvr_t *svr, int *opts, int *strs, char **paths,
         if (i>0&&*file1&&!strcmp(file1,file2)) {
             sprintf(svr->stream[i].msg,"output path error: %-512.512s",file2);
             for (i--;i>=0;i--) strclose(svr->stream+i);
+            free(svr->buff); free(svr->pbuf);
+            svr->buff = svr->pbuf = NULL;
             return 0;
         }
         if (strs[i]==STR_FILE) {
@@ -679,6 +689,8 @@ extern int strsvrstart(strsvr_t *svr, int *opts, int *strs, char **paths,
         }
         if (stropen(svr->stream+i,strs[i],rw,paths[i])) continue;
         for (i--;i>=0;i--) strclose(svr->stream+i);
+        free(svr->buff); free(svr->pbuf);
+        svr->buff = svr->pbuf = NULL;
         return 0;
     }
     /* open log streams */
@@ -703,12 +715,14 @@ extern int strsvrstart(strsvr_t *svr, int *opts, int *strs, char **paths,
 #endif
         for (i=0;i<svr->nstr;i++) strclose(svr->stream+i);
         svr->state=0;
+        free(svr->buff); free(svr->pbuf);
+        svr->buff = svr->pbuf = NULL;
         return 0;
     }
     return 1;
 }
 /* stop stream server ----------------------------------------------------------
-* start stream server
+* stop stream server
 * args   : strsvr_t *svr    IO  stream server struct
 *          char  **cmds     I   stop commands (NULL: no cmd)
 *              cmds[0]= input stream command
@@ -718,7 +732,7 @@ extern int strsvrstart(strsvr_t *svr, int *opts, int *strs, char **paths,
 *              ...
 * return : none
 *-----------------------------------------------------------------------------*/
-extern void strsvrstop(strsvr_t *svr, char **cmds)
+extern void strsvrstop(strsvr_t *svr, const char **cmds)
 {
     int i;
     
@@ -779,7 +793,7 @@ extern int strsvrpeek(strsvr_t *svr, uint8_t *buff, int nmax)
     
     if (!svr->state) return 0;
     
-    lock(&svr->lock);
+    rtklib_lock(&svr->lock);
     n=svr->npb<nmax?svr->npb:nmax;
     if (n>0) {
         memcpy(buff,svr->pbuf,n);
@@ -788,7 +802,7 @@ extern int strsvrpeek(strsvr_t *svr, uint8_t *buff, int nmax)
         memmove(svr->pbuf,svr->pbuf+n,svr->npb-n);
     }
     svr->npb-=n;
-    unlock(&svr->lock);
+    rtklib_unlock(&svr->lock);
     return n;
 }
 

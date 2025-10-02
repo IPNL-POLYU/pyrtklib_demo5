@@ -1,5 +1,5 @@
 /*------------------------------------------------------------------------------
-* notvatel.c : NovAtel OEM7/OEM6/OEM5/OEM4/OEM3 receiver functions
+* novatel.c : NovAtel OEM7/OEM6/OEM5/OEM4/OEM3 receiver functions
 *
 *          Copyright (C) 2007-2020 by T.TAKASU, All rights reserved.
 *
@@ -12,6 +12,7 @@
 *     [5] NovAtel, OM-20000129 Rev6 OEM6 Family Firmware Reference Manual, 2014
 *     [6] NovAtel, OM-20000169 v15C OEM7 Commands and Logs Reference Manual,
 *         June 2020
+*     [7] Bynav, UG017 Inteface Protocol, Nov 2022
 *
 * version : $Revision: 1.2 $ $Date: 2008/07/14 00:05:05 $
 * history : 2007/10/08 1.0 new
@@ -53,7 +54,7 @@
 *                           improve unchange-test of beidou ephemeris
 *           2017/06/15 1.15 add output half-cycle-ambiguity status to LLI
 *                           improve slip-detection by lock-time rollback
-*           2018/10/10 1.16 fix problem on data souce for galileo ephemeris
+*           2018/10/10 1.16 fix problem on data source for galileo ephemeris
 *                           output L2W instead of L2D for L2Pcodeless
 *                           test toc difference to output beidou ephemeris
 *           2019/05/10 1.17 save galileo E5b data to obs index 2
@@ -73,6 +74,8 @@
 *                           use API sat2freq() to get carrier-frequency
 *                           use API code2idx() to get freq-index
 *                           use integer types in stdint.h
+*           2024/12/06 1.19 support Bynav M2X receiver (ref[7])
+*                           add receiver option -CL6I
 *-----------------------------------------------------------------------------*/
 #include "rtklib.h"
 
@@ -177,8 +180,8 @@ static int obsindex(obs_t *obs, gtime_t time, int sat)
     obs->data[i].sat=sat;
     for (j=0;j<NFREQ+NEXOBS;j++) {
         obs->data[i].L[j]=obs->data[i].P[j]=0.0;
-        obs->data[i].D[j]=0.0;
-        obs->data[i].SNR[j]=obs->data[i].LLI[j]=0;
+        obs->data[i].D[j]=obs->data[i].SNR[j]=0.0;
+        obs->data[i].LLI[j]=0;
         obs->data[i].code[j]=CODE_NONE;
     }
     obs->n++;
@@ -218,6 +221,7 @@ static int sig2code(int sys, int sigtype)
     }
     else if (sys==SYS_GAL) {
         switch (sigtype) {
+            case  1: return CODE_L1C; /* E1BC (Bynav M2) */
             case  2: return CODE_L1C; /* E1C  (OEM6) */
             case  6: return CODE_L6B; /* E6B  (OEM7) */
             case  7: return CODE_L6C; /* E6C  (OEM7) */
@@ -351,8 +355,10 @@ static int checkpri(const char *opt, int sys, int code, int idx)
     else if (sys==SYS_CMP) {
         if (strstr(opt,"-CL1P")&&idx==0) return (code==CODE_L1P)?0:-1;
         if (strstr(opt,"-CL7D")&&idx==0) return (code==CODE_L7D)?0:-1;
+        if (strstr(opt,"-CL6I")&&idx==1) return (code==CODE_L6I)?1:-1;
         if (code==CODE_L1P) return (nex<1)?-1:NFREQ;
         if (code==CODE_L7D) return (nex<2)?-1:NFREQ+1;
+        if (code==CODE_L6I) return (nex<3)?-1:NFREQ+2;
     }
     return idx<NFREQ?idx:-1;
 }
@@ -432,7 +438,7 @@ static int decode_rangecmpb(raw_t *raw)
             raw->obs.data[index].L  [idx]=adr;
             raw->obs.data[index].P  [idx]=psr;
             raw->obs.data[index].D  [idx]=(float)dop;
-            raw->obs.data[index].SNR[idx]=(uint16_t)(snr/SNR_UNIT+0.5);
+            raw->obs.data[index].SNR[idx]=snr;
             raw->obs.data[index].LLI[idx]=(uint8_t)lli;
             raw->obs.data[index].code[idx]=(uint8_t)code;
         }
@@ -515,7 +521,7 @@ static int decode_rangeb(raw_t *raw)
             raw->obs.data[index].L  [idx]=-adr;
             raw->obs.data[index].P  [idx]=psr;
             raw->obs.data[index].D  [idx]=(float)dop;
-            raw->obs.data[index].SNR[idx]=(uint16_t)(snr/SNR_UNIT+0.5);
+            raw->obs.data[index].SNR[idx]=snr;
             raw->obs.data[index].LLI[idx]=(uint8_t)lli;
             raw->obs.data[index].code[idx]=(uint8_t)code;
         }
@@ -543,7 +549,7 @@ static int decode_rawephemb(raw_t *raw)
     }
     memcpy(subframe,p+12,30*3); /* subframe 1-3 */
     
-    if (!decode_frame(subframe,&eph,NULL,NULL,NULL)) {
+    if (!decode_frame(subframe,SYS_GPS,&eph,NULL,NULL,NULL)) {
         trace(2,"oem4 rawephemb subframe error: prn=%d\n",prn);
         return -1;
     }
@@ -684,7 +690,7 @@ static int decode_qzssrawephemb(raw_t *raw)
     }
     memcpy(subfrm,p+12,90);
     
-    if (!decode_frame(subfrm,&eph,NULL,NULL,NULL)) {
+    if (!decode_frame(subfrm,SYS_QZS,&eph,NULL,NULL,NULL)) {
         trace(3,"oem4 qzssrawephemb ephemeris error: prn=%d\n",prn);
         return 0;
     }
@@ -726,7 +732,7 @@ static int decode_qzssrawsubframeb(raw_t *raw)
     memcpy(raw->subfrm[sat-1]+30*(id-1),p+8,30);
     
     if (id==3) {
-        if (!decode_frame(raw->subfrm[sat-1],&eph,NULL,NULL,NULL)) return 0;
+        if (!decode_frame(raw->subfrm[sat-1],SYS_QZS,&eph,NULL,NULL,NULL)) return 0;
         if (!strstr(raw->opt,"-EPHALL")) {
             if (eph.iodc==raw->nav.eph[sat-1].iodc&&
                 eph.iode==raw->nav.eph[sat-1].iode) return 0; /* unchanged */
@@ -738,7 +744,7 @@ static int decode_qzssrawsubframeb(raw_t *raw)
         return 2;
     }
     else if (id==4||id==5) {
-        if (!decode_frame(raw->subfrm[sat-1],NULL,NULL,ion,utc)) return 0;
+        if (!decode_frame(raw->subfrm[sat-1],SYS_QZS,NULL,NULL,ion,utc)) return 0;
         adj_utcweek(raw->time,utc);
         matcpy(raw->nav.ion_qzs,ion,8,1);
         matcpy(raw->nav.utc_qzs,utc,8,1);
@@ -851,8 +857,8 @@ static int decode_galephemerisb(raw_t *raw)
     
     if (!strstr(raw->opt,"-EPHALL")) {
         if (eph.iode==raw->nav.eph[sat-1+MAXSAT*set].iode&&
-            timediff(eph.toe,raw->nav.eph[sat-1+MAXSAT*set].toe)==0.0&&
-            timediff(eph.toc,raw->nav.eph[sat-1+MAXSAT*set].toc)==0.0) {
+            fabs(timediff(eph.toe,raw->nav.eph[sat-1+MAXSAT*set].toe)) < 1e-9 &&
+            fabs(timediff(eph.toc,raw->nav.eph[sat-1+MAXSAT*set].toc)) < 1e-9) {
             return 0; /* unchanged */
         }
     }
@@ -973,8 +979,8 @@ static int decode_bdsephemerisb(raw_t *raw)
     eph.ttr=raw->time;
     
     if (!strstr(raw->opt,"-EPHALL")) {
-        if (timediff(raw->nav.eph[sat-1].toe,eph.toe)==0.0&&
-            timediff(raw->nav.eph[sat-1].toc,eph.toc)==0.0) return 0;
+        if (fabs(timediff(raw->nav.eph[sat-1].toe,eph.toe)) < 1e-9 &&
+            fabs(timediff(raw->nav.eph[sat-1].toc,eph.toc)) < 1e-9) return 0;
     }
     raw->nav.eph[sat-1]=eph;
     raw->ephsat=sat;
@@ -1048,7 +1054,7 @@ static int decode_navicephemerisb(raw_t *raw)
     eph.tgd[1]=0.0;
     
     if (!strstr(raw->opt,"-EPHALL")) {
-        if (timediff(raw->nav.eph[sat-1].toe,eph.toe)==0.0&&
+        if (fabs(timediff(raw->nav.eph[sat-1].toe,eph.toe)) < 1e-9 &&
             raw->nav.eph[sat-1].iode==eph.iode) return 0; /* unchanged */
     }
     raw->nav.eph[sat-1]=eph;
@@ -1107,8 +1113,7 @@ static int decode_rgeb(raw_t *raw)
             raw->obs.data[index].L  [freq]=-adr; /* flip sign */
             raw->obs.data[index].P  [freq]=psr;
             raw->obs.data[index].D  [freq]=(float)dop;
-            raw->obs.data[index].SNR[freq]=
-                0.0<=snr&&snr<255.0?(uint16_t)(snr/SNR_UNIT+0.5):0;
+            raw->obs.data[index].SNR[freq]=0.0<=snr&&snr<255.0?snr:0;
             raw->obs.data[index].LLI[freq]=(uint8_t)lli;
             raw->obs.data[index].code[freq]=freq==0?CODE_L1C:CODE_L2P;
         }
@@ -1173,7 +1178,7 @@ static int decode_rged(raw_t *raw)
             raw->obs.data[index].L  [freq]=adr;
             raw->obs.data[index].P  [freq]=psr;
             raw->obs.data[index].D  [freq]=(float)dop;
-            raw->obs.data[index].SNR[freq]=(uint16_t)(snr/SNR_UNIT+0.5);
+            raw->obs.data[index].SNR[freq]=snr;
             raw->obs.data[index].LLI[freq]=(uint8_t)lli;
             raw->obs.data[index].code[freq]=freq==0?CODE_L1C:CODE_L2P;
         }
@@ -1196,7 +1201,7 @@ static int decode_repb(raw_t *raw)
         trace(2,"oem3 repb satellite number error: prn=%d\n",prn);
         return -1;
     }
-    if (!decode_frame(p+4,&eph,NULL,NULL,NULL)) {
+    if (!decode_frame(p+4,SYS_GPS,&eph,NULL,NULL,NULL)) {
         trace(2,"oem3 repb subframe error: prn=%d\n",prn);
         return -1;
     }
@@ -1267,7 +1272,7 @@ static int decode_utcb(raw_t *raw)
 static int decode_oem4(raw_t *raw)
 {
     double tow;
-    char tstr[32];
+    char tstr[40];
     int msg,stat,week,type=U2(raw->buff+4);
     
     trace(3,"decode_oem4: type=%3d len=%d\n",type,raw->len);

@@ -178,3 +178,23 @@ T **convertType(const std::vector<std::vector<T>>& obj) {
     }
     return tmp;
 }
+
+const char** convertToConstCharPtrArray(const std::vector<std::string>& vec) {
+    if (vec.empty()) return nullptr;
+    const char** arr = (const char**)calloc(vec.size() + 1, sizeof(char*));
+    for (size_t i = 0; i < vec.size(); ++i) {
+        char* tmp = (char*)malloc(vec[i].size() + 1);
+        strcpy(tmp, vec[i].c_str());
+        arr[i] = tmp;
+    }
+    arr[vec.size()] = nullptr;
+    return arr;
+}
+
+void freeConstCharPtrArray(const char** arr) {
+    if (!arr) return;
+    for (size_t i = 0; arr[i] != nullptr; ++i) {
+        free((void*)arr[i]);
+    }
+    free((void*)arr);
+}

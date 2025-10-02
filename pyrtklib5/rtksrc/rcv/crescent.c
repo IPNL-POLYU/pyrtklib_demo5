@@ -66,12 +66,12 @@ static int chksum(const uint8_t *buff, int len)
     return (sum>>8)==buff[len-3]&&(sum&0xFF)==buff[len-4]&&
            buff[len-2]==0x0D&&buff[len-1]==0x0A;
 }
-/* decode bin 1 postion/velocity ---------------------------------------------*/
+/* decode bin 1 position/velocity ---------------------------------------------*/
 static int decode_crespos(raw_t *raw)
 {
     int ns,week,mode;
     double tow,pos[3],vel[3],std;
-    char tstr[64];
+    char tstr[40];
     uint8_t *p=raw->buff+8;
     
     trace(4,"decode_crespos: len=%d\n",raw->len);
@@ -145,14 +145,14 @@ static int decode_cresraw(raw_t *raw)
         raw->obs.data[n].P[0]=pr;
         raw->obs.data[n].L[0]=cp*freq/CLIGHT;
         raw->obs.data[n].D[0]=-(float)(dop*freq/CLIGHT);
-        raw->obs.data[n].SNR[0]=(uint16_t)(snr/SNR_UNIT+0.5);
+        raw->obs.data[n].SNR[0]=snr;
         raw->obs.data[n].LLI[0]=(uint8_t)lli;
         raw->obs.data[n].code[0]=CODE_L1C;
         
         for (j=1;j<NFREQ;j++) {
             raw->obs.data[n].L[j]=raw->obs.data[n].P[j]=0.0;
-            raw->obs.data[n].D[j]=0.0;
-            raw->obs.data[n].SNR[j]=raw->obs.data[n].LLI[j]=0;
+            raw->obs.data[n].D[j]=raw->obs.data[n].SNR[j]=0.0;
+            raw->obs.data[n].LLI[j]=0;
             raw->obs.data[n].code[j]=CODE_NONE;
         }
         n++;
@@ -256,14 +256,14 @@ static int decode_cresraw2(raw_t *raw)
                 raw->obs.data[n].P[j]=pr[j]==0.0?0.0:pr[j]-toff;
                 raw->obs.data[n].L[j]=cp[j]==0.0?0.0:cp[j]-toff*freq[j]/CLIGHT;
                 raw->obs.data[n].D[j]=-(float)dop[j];
-                raw->obs.data[n].SNR[j]=(uint16_t)(snr[j]/SNR_UNIT+0.5);
+                raw->obs.data[n].SNR[j]=snr[j];
                 raw->obs.data[n].LLI[j]=(uint8_t)lli[j];
                 raw->obs.data[n].code[j]=j==0?CODE_L1C:CODE_L2P;
             }
             else {
                 raw->obs.data[n].L[j]=raw->obs.data[n].P[j]=0.0;
-                raw->obs.data[n].D[j]=0.0;
-                raw->obs.data[n].SNR[j]=raw->obs.data[n].LLI[j]=0;
+                raw->obs.data[n].D[j]=raw->obs.data[n].SNR[j]=0.0;
+                raw->obs.data[n].LLI[j]=0;
                 raw->obs.data[n].code[j]=CODE_NONE;
             }
         }
@@ -297,7 +297,7 @@ static int decode_creseph(raw_t *raw)
         word=U4(p+8+i*40+j*4)>>6;
         for (k=0;k<3;k++) buff[i*30+j*3+k]=(uint8_t)((word>>(8*(2-k)))&0xFF);
     }
-    if (!decode_frame(buff,&eph,NULL,NULL,NULL)) {
+    if (!decode_frame(buff,SYS_GPS,&eph,NULL,NULL,NULL)) {
         trace(2,"crescent bin 95 navigation frame error: prn=%d\n",prn);
         return -1;
     }
@@ -461,14 +461,14 @@ static int decode_cresgloraw(raw_t *raw)
                 raw->obs.data[n].P[j]=pr[j]==0.0?0.0:pr[j]-toff;
                 raw->obs.data[n].L[j]=cp[j]==0.0?0.0:cp[j]-toff*freq[j]/CLIGHT;
                 raw->obs.data[n].D[j]=-(float)dop[j];
-                raw->obs.data[n].SNR[j]=(uint16_t)(snr[j]/SNR_UNIT+0.5);
+                raw->obs.data[n].SNR[j]=snr[j];
                 raw->obs.data[n].LLI[j]=(uint8_t)lli[j];
                 raw->obs.data[n].code[j]=j==0?CODE_L1C:CODE_L2P;
             }
             else {
                 raw->obs.data[n].L[j]=raw->obs.data[n].P[j]=0.0;
-                raw->obs.data[n].D[j]=0.0;
-                raw->obs.data[n].SNR[j]=raw->obs.data[n].LLI[j]=0;
+                raw->obs.data[n].D[j]=raw->obs.data[n].SNR[j]=0.0;
+                raw->obs.data[n].LLI[j]=0;
                 raw->obs.data[n].code[j]=CODE_NONE;
             }
         }

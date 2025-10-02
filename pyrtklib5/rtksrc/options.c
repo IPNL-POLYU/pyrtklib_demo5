@@ -28,13 +28,13 @@
 *                             pos1-tropopt, pos1-sateph, pos1-navsys,
 *                             pos2-gloarmode,
 *-----------------------------------------------------------------------------*/
+#define _POSIX_C_SOURCE 200809L
 #include "rtklib.h"
 
 /* system options buffer -----------------------------------------------------*/
 static prcopt_t prcopt_;
 static solopt_t solopt_;
 static filopt_t filopt_;
-static int antpostype_[2];
 static double elmask_,elmaskar_,elmaskhold_;
 static double antpos_[2][3];
 static char exsats_[1024];
@@ -60,8 +60,8 @@ static char snrmask_[NFREQ][1024];
 #define STAOPT  "0:all,1:single"
 #define STSOPT  "0:off,1:state,2:residual"
 #define ARMOPT  "0:off,1:continuous,2:instantaneous,3:fix-and-hold"
-#define POSOPT  "0:llh,1:xyz,2:single,3:posfile,4:rinexhead,5:rtcm,6:raw"
-#define TIDEOPT "0:off,1:on,2:otl"
+#define POSOPT  "0:llh,1:xyz,2:single,3:posfile,4:rinexhead,5:rtcm"
+#define TIDEOPT "1:solid+2:otl+4:spole"
 #define PHWOPT  "0:off,1:on,2:precise"
 
 EXPORT opt_t sysopts[]={
@@ -74,8 +74,9 @@ EXPORT opt_t sysopts[]={
     {"pos1-snrmask_L1", 2,  (void *)snrmask_[0],         ""     },
     {"pos1-snrmask_L2", 2,  (void *)snrmask_[1],         ""     },
     {"pos1-snrmask_L5", 2,  (void *)snrmask_[2],         ""     },
+    {"pos1-snrmask_L6", 2,  (void *)snrmask_[3],         ""     },
     {"pos1-dynamics",   3,  (void *)&prcopt_.dynamics,   SWTOPT },
-    {"pos1-tidecorr",   3,  (void *)&prcopt_.tidecorr,   TIDEOPT},
+    {"pos1-tidecorr",   0,  (void *)&prcopt_.tidecorr,   TIDEOPT},
     {"pos1-ionoopt",    3,  (void *)&prcopt_.ionoopt,    IONOPT },
     {"pos1-tropopt",    3,  (void *)&prcopt_.tropopt,    TRPOPT },
     {"pos1-sateph",     3,  (void *)&prcopt_.sateph,     EPHOPT },
@@ -140,6 +141,7 @@ EXPORT opt_t sysopts[]={
     {"stats-eratio1",   1,  (void *)&prcopt_.eratio[0],  ""     },
     {"stats-eratio2",   1,  (void *)&prcopt_.eratio[1],  ""     },
     {"stats-eratio5",   1,  (void *)&prcopt_.eratio[2],  ""     },
+    {"stats-eratio6",   1,  (void *)&prcopt_.eratio[3],  ""     },
     {"stats-errphase",  1,  (void *)&prcopt_.err[1],     "m"    },
     {"stats-errphaseel",1,  (void *)&prcopt_.err[2],     "m"    },
     {"stats-errphasebl",1,  (void *)&prcopt_.err[3],     "m/10km"},
@@ -158,7 +160,7 @@ EXPORT opt_t sysopts[]={
     {"stats-prnpos",    1,  (void *)&prcopt_.prn[5],     "m"    },
     {"stats-clkstab",   1,  (void *)&prcopt_.sclkstab,   "s/s"  },
     
-    {"ant1-postype",    3,  (void *)&antpostype_[0],     POSOPT },
+    {"ant1-postype",    3,  (void *)&prcopt_.rovpos,     POSOPT },
     {"ant1-pos1",       1,  (void *)&antpos_[0][0],      "deg|m"},
     {"ant1-pos2",       1,  (void *)&antpos_[0][1],      "deg|m"},
     {"ant1-pos3",       1,  (void *)&antpos_[0][2],      "m|m"  },
@@ -167,7 +169,7 @@ EXPORT opt_t sysopts[]={
     {"ant1-antdeln",    1,  (void *)&prcopt_.antdel[0][1],"m"   },
     {"ant1-antdelu",    1,  (void *)&prcopt_.antdel[0][2],"m"   },
     
-    {"ant2-postype",    3,  (void *)&antpostype_[1],     POSOPT },
+    {"ant2-postype",    3,  (void *)&prcopt_.refpos,     POSOPT },
     {"ant2-pos1",       1,  (void *)&antpos_[1][0],      "deg|m"},
     {"ant2-pos2",       1,  (void *)&antpos_[1][1],      "deg|m"},
     {"ant2-pos3",       1,  (void *)&antpos_[1][2],      "m|m"  },
@@ -223,20 +225,30 @@ static int enum2str(char *s, const char *comment, int val)
     strncpy(s,p+n,q-p-n); s[q-p-n]='\0';
     return (int)(q-p-n);
 }
-/* string to enum ------------------------------------------------------------*/
-static int str2enum(const char *str, const char *comment, int *val)
-{
-    const char *p;
-    char s[32];
-    
-    for (p=comment;;p++) {
-       if (!(p=strstr(p,str))) break;
-       if (*(p-1)!=':') continue;
-       for (p-=2;'0'<=*p&&*p<='9';p--) ;
-       return sscanf(p+1,"%d",val)==1;
+/* String to enum ------------------------------------------------------------
+ * Note if str is empty then the first comment digit is returned.
+ */
+static int str2enum(const char *str, const char *comment, int *val) {
+    for (const char *p = comment;; p++) {
+        p=strstr(p, str);
+        if (!p) break;
+        size_t i=p-comment;
+        if (i<1) continue;
+        if (comment[--i]!=':') continue;
+        /* Search for preceding digits */
+        size_t j=i;
+        while (j>0) {
+            char c=comment[j-1];
+            if (c<'0' || c>'9') break;
+            j--;
+        }
+        if (j==i) continue; /* No digits found */
+        return sscanf(comment+j,"%d",val)==1;
     }
-    sprintf(s,"%.30s:",str);
-    if ((p=strstr(comment,s))) { /* number */
+    char s[32];
+    snprintf(s,sizeof(s),"%.30s:",str);
+    const char *p=strstr(comment,s);
+    if (p) { /* Number */
         return sscanf(p,"%d",val)==1;
     }
     return 0;
@@ -396,36 +408,34 @@ static void buff2sysopts(void)
 {
     double pos[3],*rr;
     char buff[1024],*p,*id;
-    int i,j,sat,*ps;
+    int i,j,sat,ps;
     
     prcopt_.elmin     =elmask_    *D2R;
     prcopt_.elmaskar  =elmaskar_  *D2R;
     prcopt_.elmaskhold=elmaskhold_*D2R;
     
     for (i=0;i<2;i++) {
-        ps=i==0?&prcopt_.rovpos:&prcopt_.refpos;
+        ps=i==0?prcopt_.rovpos:prcopt_.refpos;
         rr=i==0?prcopt_.ru:prcopt_.rb;
         
-        if (antpostype_[i]==0) { /* lat/lon/hgt */
-            *ps=0;
+        if (ps==POSOPT_POS_LLH) { /* lat/lon/hgt */
             pos[0]=antpos_[i][0]*D2R;
             pos[1]=antpos_[i][1]*D2R;
             pos[2]=antpos_[i][2];
             pos2ecef(pos,rr);
         }
-        else if (antpostype_[i]==1) { /* xyz-ecef */
-            *ps=0;
+        else if (ps==POSOPT_POS_XYZ) { /* xyz-ecef */
             rr[0]=antpos_[i][0];
             rr[1]=antpos_[i][1];
             rr[2]=antpos_[i][2];
         }
-        else *ps=antpostype_[i]-1;
     }
     /* excluded satellites */
     for (i=0;i<MAXSAT;i++) prcopt_.exsats[i]=0;
     if (exsats_[0]!='\0') {
         strcpy(buff,exsats_);
-        for (p=strtok(buff," ");p;p=strtok(NULL," ")) {
+        char *q;
+        for (p=strtok_r(buff," ",&q);p;p=strtok_r(NULL," ",&q)) {
             if (*p=='+') id=p+1; else id=p;
             if (!(sat=satid2no(id))) continue;
             prcopt_.exsats[sat-1]=*p=='+'?2:1;
@@ -435,9 +445,15 @@ static void buff2sysopts(void)
     for (i=0;i<NFREQ;i++) {
         for (j=0;j<9;j++) prcopt_.snrmask.mask[i][j]=0.0;
         strcpy(buff,snrmask_[i]);
-        for (p=strtok(buff,","),j=0;p&&j<9;p=strtok(NULL,",")) {
+        char *q;
+        for (p=strtok_r(buff,",",&q),j=0;p&&j<9;p=strtok_r(NULL,",",&q)) {
             prcopt_.snrmask.mask[i][j++]=atof(p);
         }
+    }
+    /* Guard number of frequencies */
+    if (prcopt_.nf>NFREQ) {
+       fprintf(stderr,"Number of frequencies %d limited to %d, rebuild with NFREQ=%d\n",prcopt_.nf, NFREQ, prcopt_.nf);
+        prcopt_.nf=NFREQ;
     }
     /* number of frequency (4:L1+L5) TODO ????*/
     /*if (prcopt_.nf==4) {
@@ -449,25 +465,27 @@ static void buff2sysopts(void)
 static void sysopts2buff(void)
 {
     double pos[3],*rr;
-    char id[32],*p;
-    int i,j,sat,*ps;
+    char id[8],*p;
+    int i,j,sat,ps;
     
     elmask_    =prcopt_.elmin     *R2D;
     elmaskar_  =prcopt_.elmaskar  *R2D;
     elmaskhold_=prcopt_.elmaskhold*R2D;
     
     for (i=0;i<2;i++) {
-        ps=i==0?&prcopt_.rovpos:&prcopt_.refpos;
+        ps=i==0?prcopt_.rovpos:prcopt_.refpos;
         rr=i==0?prcopt_.ru:prcopt_.rb;
         
-        if (*ps==0) {
-            antpostype_[i]=0;
+        if (ps==POSOPT_POS_LLH) {
             ecef2pos(rr,pos);
             antpos_[i][0]=pos[0]*R2D;
             antpos_[i][1]=pos[1]*R2D;
             antpos_[i][2]=pos[2];
+        } else if (ps==POSOPT_POS_XYZ) {
+            antpos_[i][0] = rr[0];
+            antpos_[i][1] = rr[1];
+            antpos_[i][2] = rr[2];
         }
-        else antpostype_[i]=*ps+1;
     }
     /* excluded satellites */
     exsats_[0]='\0';
@@ -513,7 +531,6 @@ extern void resetsysopts(void)
     filopt_.blq    [0]='\0';
     filopt_.solstat[0]='\0';
     filopt_.trace  [0]='\0';
-    for (i=0;i<2;i++) antpostype_[i]=0;
     elmask_=15.0;
     elmaskar_=0.0;
     elmaskhold_=0.0;

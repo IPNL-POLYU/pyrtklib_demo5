@@ -208,7 +208,7 @@ static int decode_irn_utc(const uint8_t *buff, double *utc)
     
     /* 9 or 26: utc and time sync parameters */
     if      (id3==9||id3==26) i=8*37*2+36;
-    else if (id4==9||id3==26) i=8*37*3+36;
+    else if (id4==9||id4==26) i=8*37*3+36;
     else return 0;
 
     utc[0]=getbits(buff,i,16)*P2_35; i+=16; /* A0 */
@@ -392,7 +392,7 @@ static int decode_gal_inav_utc(const uint8_t *buff, double *utc)
 extern int decode_gal_inav(const uint8_t *buff, eph_t *eph, double *ion,
                            double *utc)
 {
-    trace(4,"decode_gal_fnav:\n");
+    trace(4,"decode_gal_inav:\n");
     
     if (eph&&!decode_gal_inav_eph(buff,eph)) return 0;
     if (ion&&!decode_gal_inav_ion(buff,ion)) return 0;
@@ -918,7 +918,7 @@ static int decode_glostr_eph(const uint8_t *buff, geph_t *geph)
     
     /* frame 2 */
     frn2        =getbitu(buff,i, 4);           i+= 4;
-    geph_glo.svh   =getbitu(buff,i, 1);           i+= 1+2; /* MSB of Bn */
+    int Bn      =getbitu(buff,i, 1);           i+= 1+2; /* MSB of Bn */
     P2          =getbitu(buff,i, 1);           i+= 1;
     tb          =getbitu(buff,i, 7);           i+= 7+5;
     geph_glo.vel[1]=getbitg(buff,i,24)*P2_20*1E3; i+=24;
@@ -947,8 +947,7 @@ static int decode_glostr_eph(const uint8_t *buff, geph_t *geph)
     M           =getbitu(buff,i, 2);
     
     if (frn1!=1||frn2!=2||frn3!=3||frn4!=4) {
-        trace(3,"decode_glostr error: frn=%d %d %d %d %d\n",frn1,frn2,frn3,
-              frn4);
+        trace(3,"decode_glostr error: frn=%d %d %d %d\n",frn1,frn2,frn3,frn4);
         return 0;
     }
     if (!(geph_glo.sat=satno(SYS_GLO,slot))) {
@@ -957,6 +956,8 @@ static int decode_glostr_eph(const uint8_t *buff, geph_t *geph)
     }
     geph_glo.frq=0; /* set default */
     geph_glo.iode=tb;
+    geph_glo.svh = (ln << 3) | Bn; // Extended SVH
+    geph_glo.flags = (M << 7) | (P4 << 6) | (P3 << 5) | (P2 << 4) | (P1 << 2) | P; // Status flags
     tow=time2gpst(gpst2utc(geph->tof),&week);
     tod=fmod(tow,86400.0); tow-=tod;
     tof=tk_h*3600.0+tk_m*60.0+tk_s-10800.0; /* lt->utc */
@@ -1011,14 +1012,14 @@ extern int decode_glostr(const uint8_t *buff, geph_t *geph, double *utc)
     return 1;
 }
 /* decode GPS/QZSS ephemeris -------------------------------------------------*/
-static int decode_frame_eph(const uint8_t *buff, eph_t *eph)
+static int decode_frame_eph(const uint8_t *buff, int sys, eph_t *eph)
 {
+    trace(4, "decode_frame_eph: sys=%d\n", sys);
+
     eph_t eph_sat={0};
     double tow1,tow2,tow3,toc,sqrtA;
     int i=48,id1,id2,id3,week,iodc0,iodc1,iode,tgd;
-    
-    trace(4,"decode_frame_eph:\n");
-    
+
     i=240*0+24; /* subframe 1 */
     tow1        =getbitu(buff,i,17)*6.0;          i+=17+2;
     id1         =getbitu(buff,i, 3);              i+=3+2;
@@ -1047,7 +1048,10 @@ static int decode_frame_eph(const uint8_t *buff, eph_t *eph)
     eph_sat.cus =getbits(buff,i,16)*P2_29;        i+=16;
     sqrtA    =getbitu(buff,i,32)*P2_19;        i+=32;
     eph_sat.toes=getbitu(buff,i,16)*16.0;         i+=16;
-    eph_sat.fit =getbitu(buff,i, 1)?0.0:4.0; /* 0:4hr,1:>4hr */
+    if (sys==SYS_GPS)
+        eph_sat.fit=getbitu(buff,i,1)?6:4; /* 0:4hr,1:>4hr */
+    else if (sys==SYS_QZS)
+        eph_sat.fit=getbitu(buff,i,1)?4:2; /* 0:2hr,1:>2hr */
     
     i=240*2+24; /* subframe 3 */
     tow3        =getbitu(buff,i,17)*6.0;          i+=17+2;
@@ -1189,7 +1193,8 @@ static int decode_alm_qzs(const uint8_t *buff, alm_t *alm)
 /* decode GPS/QZSS almanac/health --------------------------------------------*/
 static int decode_frame_alm(const uint8_t *buff, alm_t *alm)
 {
-    int frm,dataid,ret=0;
+    uint32_t frm,dataid;
+    int ret=0;
     
     trace(4,"decode_frame_alm:\n");
     
@@ -1262,6 +1267,7 @@ static int decode_frame_utc(const uint8_t *buff, double *utc)
 *                                 buff[ 60- 89]: subframe 3
 *                                 buff[ 90-119]: subframe 4
 *                                 buff[120-149]: subframe 5
+*          int sys          I   SYS_GPS or SYS_QZSS
 *          eph_t *eph       IO  GPS/QZSS ephemeris       (NULL: not output)
 *          alm_t *alm       IO  GPS/QZSS almanac/health  (NULL: not output)
 *                                 alm[sat-1]: almanac/health (sat=sat no)
@@ -1275,12 +1281,12 @@ static int decode_frame_utc(const uint8_t *buff, double *utc)
 * notes  : use CPU time to resolve modulo 1024 ambiguity of the week number
 *          see ref [1]
 *-----------------------------------------------------------------------------*/
-extern int decode_frame(const uint8_t *buff, eph_t *eph, alm_t *alm,
+extern int decode_frame(const uint8_t *buff, int sys, eph_t *eph, alm_t *alm,
                         double *ion, double *utc)
 {
     trace(4,"decode_frame:\n");
     
-    if (eph&&!decode_frame_eph(buff,eph)) return 0;
+    if (eph&&!decode_frame_eph(buff,sys,eph)) return 0;
     if (alm&&!decode_frame_alm(buff,alm)) return 0;
     if (ion&&!decode_frame_ion(buff,ion)) return 0;
     if (utc&&!decode_frame_utc(buff,utc)) return 0;
@@ -1316,6 +1322,7 @@ extern int init_raw(raw_t *raw, int format)
             raw->tobs [i][j]=time0;
             raw->lockt[i][j]=0.0;
             raw->halfc[i][j]=0;
+            raw->lockflag[i][j]=0;
         }
         raw->icpp[i]=raw->off[i]=raw->prCA[i]=raw->dpCA[i]=0.0;
     }
@@ -1348,17 +1355,18 @@ extern int init_raw(raw_t *raw, int format)
     }
     raw->obs.n =0;
     raw->obuf.n=0;
-    raw->nav.n =MAXSAT*2;
-    raw->nav.na=MAXSAT;
-    raw->nav.ng=NSATGLO;
-    raw->nav.ns=NSATSBS*2;
+    raw->nav.n =raw->nav.nmax =MAXSAT*2;
+    raw->nav.na=raw->nav.namax=MAXSAT;
+    raw->nav.ng=raw->nav.ngmax=NSATGLO;
+    raw->nav.ns=raw->nav.nsmax=NSATSBS*2;
     for (i=0;i<MAXOBS   ;i++) raw->obs.data [i]=data0;
     for (i=0;i<MAXOBS   ;i++) raw->obuf.data[i]=data0;
     for (i=0;i<MAXSAT*2 ;i++) raw->nav.eph  [i]=eph0;
     for (i=0;i<MAXSAT   ;i++) raw->nav.alm  [i]=alm0;
     for (i=0;i<NSATGLO  ;i++) raw->nav.geph [i]=geph0;
     for (i=0;i<NSATSBS*2;i++) raw->nav.seph [i]=seph0;
-    raw->sta.name[0]=raw->sta.marker[0]='\0';
+    raw->sta.name[0]=raw->sta.markerno[0]=raw->sta.markertype[0]='\0';
+    raw->sta.observer[0]=raw->sta.agency[0]='\0';
     raw->sta.antdes[0]=raw->sta.antsno[0]='\0';
     raw->sta.rectype[0]=raw->sta.recver[0]=raw->sta.recsno[0]='\0';
     raw->sta.antsetup=raw->sta.itrf=raw->sta.deltype=0;
@@ -1371,6 +1379,7 @@ extern int init_raw(raw_t *raw, int format)
     raw->format=format;
     switch (format) {
         case STRFMT_RT17: ret=init_rt17(raw); break;
+        case STRFMT_SEPT: ret=init_sbf(raw); break;
     }
     if (!ret) {
         free_raw(raw);
@@ -1389,14 +1398,15 @@ extern void free_raw(raw_t *raw)
     
     free(raw->obs.data ); raw->obs.data =NULL; raw->obs.n =0;
     free(raw->obuf.data); raw->obuf.data=NULL; raw->obuf.n=0;
-    free(raw->nav.eph  ); raw->nav.eph  =NULL; raw->nav.n =0;
-    free(raw->nav.alm  ); raw->nav.alm  =NULL; raw->nav.na=0;
-    free(raw->nav.geph ); raw->nav.geph =NULL; raw->nav.ng=0;
-    free(raw->nav.seph ); raw->nav.seph =NULL; raw->nav.ns=0;
+    free(raw->nav.eph  ); raw->nav.eph  =NULL; raw->nav.n =raw->nav.nmax =0;
+    free(raw->nav.alm  ); raw->nav.alm  =NULL; raw->nav.na=raw->nav.namax=0;
+    free(raw->nav.geph ); raw->nav.geph =NULL; raw->nav.ng=raw->nav.ngmax=0;
+    free(raw->nav.seph ); raw->nav.seph =NULL; raw->nav.ns=raw->nav.nsmax=0;
     
     /* free receiver dependent data */
     switch (raw->format) {
         case STRFMT_RT17: free_rt17(raw); break;
+        case STRFMT_SEPT: free_sbf(raw); break;
     }
     raw->rcv_data=NULL;
 }
@@ -1426,6 +1436,7 @@ extern int input_raw(raw_t *raw, int format, uint8_t data)
         case STRFMT_RT17 : return input_rt17 (raw,data);
         case STRFMT_SEPT : return input_sbf  (raw,data);
         /*case STRFMT_TERSUS: return input_tersus(raw,data);*/
+        case STRFMT_UNICORE : return input_unicore  (raw,data);
     }
     return 0;
 }
@@ -1453,6 +1464,7 @@ extern int input_rawf(raw_t *raw, int format, FILE *fp)
         case STRFMT_RT17 : return input_rt17f (raw,fp);
         case STRFMT_SEPT : return input_sbff  (raw,fp);
         /*case STRFMT_TERSUS: return input_tersusf(raw,fp); */
+        case STRFMT_UNICORE : return input_unicoref  (raw,fp);
     }
     return -2;
 }

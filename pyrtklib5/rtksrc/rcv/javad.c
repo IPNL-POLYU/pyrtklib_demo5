@@ -201,7 +201,7 @@ static gtime_t adjday(gtime_t time, double tod)
 /* set time tag --------------------------------------------------------------*/
 static int settag(obsd_t *data, gtime_t time)
 {
-    char s1[64],s2[64];
+    char s1[40],s2[40];
     
     if (data->time.time!=0&&fabs(timediff(data->time,time))>5E-4) {
         time2str(data->time,s1,4); time2str(time,s2,4);
@@ -232,8 +232,8 @@ static int flushobuf(raw_t *raw)
         raw->obuf.data[i].time=time0;
         for (j=0;j<NFREQ+NEXOBS;j++) {
             raw->obuf.data[i].L[j]=raw->obuf.data[i].P[j]=0.0;
-            raw->obuf.data[i].D[j]=0.0;
-            raw->obuf.data[i].SNR[j]=raw->obuf.data[i].LLI[j]=0;
+            raw->obuf.data[i].D[j]=raw->obuf.data[i].SNR[j]=0.0;
+            raw->obuf.data[i].LLI[j]=0;
             raw->obuf.data[i].code[j]=CODE_NONE;
         }
     }
@@ -266,11 +266,12 @@ static int decode_RT(raw_t *raw)
     if (raw->tbase>=1) time=utc2gpst(time); /* UTC->GPST */
     raw->time=time;
     
-    trace(3,"decode_RT: time=%s\n",time_str(time,3));
+    char tstr[40];
+    trace(3,"decode_RT: time=%s\n",time2str(time,tstr,3));
     
     if (raw->outtype) {
         msg=raw->msgtype+strlen(raw->msgtype);
-        sprintf(msg," %s",time_str(time,3));
+        sprintf(msg," %s",time2str(time,tstr,3));
     }
     /* flush observation data buffer */
     return flushobuf(raw);
@@ -328,7 +329,8 @@ static int decode_RD(raw_t *raw)
     raw->time=timeadd(epoch2time(ep),raw->tod*0.001);
     if (raw->tbase>=1) raw->time=utc2gpst(raw->time); /* UTC->GPST */
     
-    trace(3,"decode_RD: time=%s\n",time_str(raw->time,3));
+    char tstr[40];
+    trace(3,"decode_RD: time=%s\n",time2str(raw->time,tstr,3));
     
     return 0;
 }
@@ -704,7 +706,7 @@ static int decode_WE(raw_t *raw)
     
     if (raw->outtype) {
         msg=raw->msgtype+strlen(raw->msgtype);
-        sprintf(msg," prn=%3d tod=%6d",prn,tod);
+        sprintf(msg," prn=%3d tod=%6u",prn,tod);
     }
     if (!(seph.sat=satno(SYS_SBS,prn))) {
         trace(2,"javad WE satellite error: prn=%d\n",prn);
@@ -833,7 +835,8 @@ static int decode_L1eph(int sat, raw_t *raw)
 {
     eph_t eph={0};
     
-    if (!decode_frame(raw->subfrm[sat-1],&eph,NULL,NULL,NULL)) return 0;
+    int sys = satsys(sat, NULL);
+    if (!decode_frame(raw->subfrm[sat-1],sys,&eph,NULL,NULL,NULL)) return 0;
     
     if (!strstr(raw->opt,"-EPHALL")) {
         if (eph.iode==raw->nav.eph[sat-1].iode&&
@@ -864,7 +867,7 @@ static int decode_L1ionutc(int sat, raw_t *raw)
     double ion[8],utc[8];
     int sys=satsys(sat,NULL);
 
-    if (!decode_frame(raw->subfrm[sat-1],NULL,NULL,ion,utc)) return 0;
+    if (!decode_frame(raw->subfrm[sat-1],sys,NULL,NULL,ion,utc)) return 0;
     
     adj_utcweek(raw->time,utc);
     if (sys==SYS_QZS) {
@@ -1559,7 +1562,7 @@ static int decode_Ex(raw_t *raw, char sig)
         
         if ((idx=checkpri(sys,code,raw->opt,idx))>=0) {
             if (!settag(raw->obuf.data+i,raw->time)) continue;
-            raw->obuf.data[i].SNR[idx]=(uint16_t)(cnr/SNR_UNIT+0.5);
+            raw->obuf.data[i].SNR[idx]=cnr;
         }
     }
     return 0;
@@ -1590,7 +1593,7 @@ static int decode_xE(raw_t *raw, char sig)
         
         if ((idx=checkpri(sys,code,raw->opt,idx))>=0) {
             if (!settag(raw->obuf.data+i,raw->time)) continue;
-            raw->obuf.data[i].SNR[idx]=(uint16_t)(cnr*0.25/SNR_UNIT+0.5);
+            raw->obuf.data[i].SNR[idx]=cnr*0.25;
         }
     }
     return 0;
@@ -1659,12 +1662,13 @@ static int decode_TC(raw_t *raw)
         sat=raw->obuf.data[i].sat;
         tt_p=(uint16_t)raw->lockt[sat-1][0];
         
-        trace(4,"%s: sat=%2d tt=%6d->%6d\n",time_str(raw->time,3),sat,tt_p,tt);
+        char tstr[40];
+        trace(4,"%s: sat=%2d tt=%6d->%6d\n",time2str(raw->time,tstr,3),sat,tt_p,tt);
         
         /* loss-of-lock detected by lock-time counter */
         if (tt==0||tt<tt_p) {
             trace(3,"decode_TC: loss-of-lock detected: t=%s sat=%2d tt=%6d->%6d\n",
-                  time_str(raw->time,3),sat,tt_p,tt);
+                  time2str(raw->time,tstr,3),sat,tt_p,tt);
             raw->obuf.data[i].LLI[0]|=1;
         }
         raw->lockt[sat-1][0]=tt;

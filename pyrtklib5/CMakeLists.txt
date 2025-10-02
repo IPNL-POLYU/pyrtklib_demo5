@@ -18,6 +18,16 @@ include_directories(${PYBIND11_INCLUDE_DIRS})
 ADD_DEFINITIONS(-DENACMP -DENAGAL -DENAGLO -DENAQZS -DENAIRN -DTRACE -DDLL -DEBUG)
 
 
+if(MSVC)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+endif()
+
+if (GCC)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -Wall -O3 -ansi -pedantic")
+    set(CMAKE_C_FLAGS "-Wno-unused-but-set-variable -Wno-format-overflow -Wno-unused-result -Wpointer-to-int-cast")
+endif()
+
+
 if(DARWIN)
 ADD_DEFINITIONS(-DDARWIN)
 endif()

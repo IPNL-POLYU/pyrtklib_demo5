@@ -142,7 +142,7 @@
 | 5. Positions AKA Stream Positions
 |    (NOT RECOMMENDED)
 |
-| Streamed postions are of no use to RTKLIB. They will be ignored. RTKLIB
+| Streamed positions are of no use to RTKLIB. They will be ignored. RTKLIB
 | computes positions from the raw satellite data. It has no use for the
 | receiver's position solutions. Streamed positions also consume
 | considerable bandwidth in the stream and/or space in a file.
@@ -470,7 +470,7 @@ EXPORT void free_rt17(raw_t *Raw)
 /* init_rt17 = Initialize RT17 dependent private storage */
 EXPORT int init_rt17(raw_t *Raw)
 {
-	rt17_t *rt17 = NULL;
+    rt17_t *rt17 = NULL;
     uint8_t *MessageBuffer = NULL, *PacketBuffer = NULL;
 
     if (Raw->format != STRFMT_RT17)
@@ -573,7 +573,7 @@ EXPORT int input_rt17(raw_t *Raw, uint8_t Data)
     }
 
     if (Raw->outtype)
-        sprintf(Raw->msgtype, "RT17 0x%02X (%4d)", PacketBuffer[2], rt17->PacketLength);
+        sprintf(Raw->msgtype, "RT17 0x%02X (%4u)", PacketBuffer[2], rt17->PacketLength);
 
     /* If this is a SVDATA packet, then process it immediately */
     if (PacketBuffer[2] == RETSVDATA)
@@ -731,8 +731,8 @@ EXPORT int input_rt17f(raw_t *Raw, FILE *fp)
     
     for (i = 0; i < 4096; i++)
     {
-	if ((Data = fgetc(fp)) == EOF) return -2;
-	    if ((Ret = input_rt17(Raw, (uint8_t) Data))) return Ret;
+        if ((Data = fgetc(fp)) == EOF) return -2;
+            if ((Ret = input_rt17(Raw, (uint8_t) Data))) return Ret;
     }
 
     return 0; /* return at every 4k bytes */
@@ -1701,7 +1701,7 @@ static int DecodeType17(raw_t *Raw, uint32_t rif)
             if (Flags1 & M_BIT6) /* L1 data valid */
             {
                 /* Measure of L1 signal strength (dB * 4) */
-                obs->SNR[0] = (uint16_t)(U1(p)*0.25/SNR_UNIT+0.5);
+                obs->SNR[0] = U1(p)*0.25;
                 p++;
                 
                 /* Full L1 C/A code or P-code pseudorange (meters) */
@@ -1721,7 +1721,7 @@ static int DecodeType17(raw_t *Raw, uint32_t rif)
             if (Flags1 & M_BIT0)  /* L2 data loaded */
             {
                 /* Measure of L2 signal strength (dB * 4) */
-                obs->SNR[1] = (uint16_t)(U1(p)*0.25/SNR_UNIT+0.5);
+                obs->SNR[1] = U1(p)*0.25;
                 p++;
                 
                 /* L2 Continuous Phase (cycles) */
@@ -1780,7 +1780,7 @@ static int DecodeType17(raw_t *Raw, uint32_t rif)
             if (Flags1 & M_BIT6) /* L1 data valid */
             {           
                 /* Measure of satellite signal strength (dB) */
-                obs->SNR[0] = (uint16_t)(R8(p)/SNR_UNIT+0.5);
+                obs->SNR[0] = R8(p);
                 p += 8;
 
                 /* Full L1 C/A code or P-code pseudorange (meters) */
@@ -1803,7 +1803,7 @@ static int DecodeType17(raw_t *Raw, uint32_t rif)
             if (Flags1 & M_BIT0) /* L2 data loaded */
             {
                 /* Measure of L2 signal strength (dB) */
-                obs->SNR[1] = (uint16_t)(R8(p)/SNR_UNIT+0.5);
+                obs->SNR[1] = R8(p);
                 p += 8;
 
                 /* L2 Continuous Phase (cycles) */                

@@ -187,7 +187,7 @@ extern int convkml(const char *infile, const char *outfile, gtime_t ts,
     else strcpy(file,outfile);
     
     /* read solution file */
-    stat=readsolt(files,nfile,ts,te,tint,qflg,&solbuf);
+    stat=readsolt((const char **)files,nfile,ts,te,tint,qflg,&solbuf);
     
     for (i=0;i<MAXEXFILE;i++) free(files[i]);
     
@@ -209,5 +209,7 @@ extern int convkml(const char *infile, const char *outfile, gtime_t ts,
         for (i=0;i<3;i++) solbuf.rb[i]+=dr[i];
     }
     /* save kml file */
-    return savekml(file,&solbuf,tcolor,pcolor,outalt,outtime)?0:-4;
+    int r = savekml(file,&solbuf,tcolor,pcolor,outalt,outtime)?0:-4;
+    freesolbuf(&solbuf);
+    return r;
 }

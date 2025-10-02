@@ -76,7 +76,8 @@ extern int init_rtcm(rtcm_t *rtcm)
     
     rtcm->staid=rtcm->stah=rtcm->seqno=rtcm->outtype=0;
     rtcm->time=rtcm->time_s=time0;
-    rtcm->sta.name[0]=rtcm->sta.marker[0]='\0';
+    rtcm->sta.name[0]=rtcm->sta.markerno[0]=rtcm->sta.markertype[0]='\0';
+    rtcm->sta.observer[0]=rtcm->sta.agency[0]='\0';
     rtcm->sta.antdes[0]=rtcm->sta.antsno[0]='\0';
     rtcm->sta.rectype[0]=rtcm->sta.recver[0]=rtcm->sta.recsno[0]='\0';
     rtcm->sta.antsetup=rtcm->sta.itrf=rtcm->sta.deltype=0;
@@ -104,6 +105,7 @@ extern int init_rtcm(rtcm_t *rtcm)
     rtcm->obs.data=NULL;
     rtcm->nav.eph =NULL;
     rtcm->nav.geph=NULL;
+    rtcm->nav.seph=NULL;
     
     /* reallocate memory for observation and ephemeris buffer */
     if (!(rtcm->obs.data=(obsd_t *)malloc(sizeof(obsd_t)*MAXOBS))||
@@ -113,8 +115,9 @@ extern int init_rtcm(rtcm_t *rtcm)
         return 0;
     }
     rtcm->obs.n=0;
-    rtcm->nav.n=MAXSAT*2;
-    rtcm->nav.ng=MAXPRNGLO;
+    rtcm->nav.n=rtcm->nav.nmax=MAXSAT*2;
+    rtcm->nav.ng=rtcm->nav.ngmax=MAXPRNGLO;
+    rtcm->nav.ns=rtcm->nav.nsmax=0;
     for (i=0;i<MAXOBS   ;i++) rtcm->obs.data[i]=data0;
     for (i=0;i<MAXSAT*2 ;i++) rtcm->nav.eph [i]=eph0;
     for (i=0;i<MAXPRNGLO;i++) rtcm->nav.geph[i]=geph0;
@@ -131,8 +134,8 @@ extern void free_rtcm(rtcm_t *rtcm)
     
     /* free memory for observation and ephemeris buffer */
     free(rtcm->obs.data); rtcm->obs.data=NULL; rtcm->obs.n=0;
-    free(rtcm->nav.eph ); rtcm->nav.eph =NULL; rtcm->nav.n=0;
-    free(rtcm->nav.geph); rtcm->nav.geph=NULL; rtcm->nav.ng=0;
+    free(rtcm->nav.eph ); rtcm->nav.eph =NULL; rtcm->nav.n=rtcm->nav.nmax=0;
+    free(rtcm->nav.geph); rtcm->nav.geph=NULL; rtcm->nav.ng=rtcm->nav.ngmax=0;
 }
 /* input RTCM 2 message from stream --------------------------------------------
 * fetch next RTCM 2 message and input a message from byte stream
@@ -204,6 +207,7 @@ extern int input_rtcm2(rtcm_t *rtcm, uint8_t data)
 *          strings separated by spaces.
 *
 *          -EPHALL  : input all ephemerides (default: only new)
+*          -INVPRR  : invert polarity of PhaseRangeRate
 *          -STA=nnn : input only message with STAID=nnn (default: all)
 *          -GLss    : select signal ss for GPS MSM (ss=1C,1P,...)
 *          -RLss    : select signal ss for GLO MSM (ss=1C,1P,...)
@@ -213,6 +217,7 @@ extern int input_rtcm2(rtcm_t *rtcm, uint8_t data)
 *          -ILss    : select signal ss for IRN MSM (ss=5A,9A,...)
 *          -GALINAV : select I/NAV for Galileo ephemeris (default: all)
 *          -GALFNAV : select F/NAV for Galileo ephemeris (default: all)
+*          -RT_INP  : select real-time input
 *
 *          supported RTCM 3 messages (ref [7][10][15][16][17][18])
 *
@@ -274,8 +279,11 @@ extern int input_rtcm3(rtcm_t *rtcm, uint8_t data)
     
     if (rtcm->nbyte==3) {
         rtcm->len=getbitu(rtcm->buff,14,10)+3; /* length without parity */
+        trace(4,"msg len=%d\n",rtcm->len);
     }
-    if (rtcm->nbyte<3||rtcm->nbyte<rtcm->len+3) return 0;
+    if (rtcm->nbyte<3||rtcm->nbyte<rtcm->len+3) return 0;   /* return if message not complete */
+    /* message complete, start parsing */
+    rtcm->nbyte_invalid=rtcm->nbyte;  /* length of potentially invalid bytes */
     rtcm->nbyte=0;
     
     /* check parity */
@@ -283,6 +291,7 @@ extern int input_rtcm3(rtcm_t *rtcm, uint8_t data)
         trace(2,"rtcm3 parity error: len=%d\n",rtcm->len);
         return 0;
     }
+    rtcm->nbyte_invalid=0; /* no error, so clear invalid_byte count */
     /* decode rtcm3 message */
     return decode_rtcm3(rtcm);
 }
@@ -320,7 +329,13 @@ extern int input_rtcm3f(rtcm_t *rtcm, FILE *fp)
     
     for (i=0;i<4096;i++) {
         if ((data=fgetc(fp))==EOF) return -2;
-        if ((ret=input_rtcm3(rtcm,(uint8_t)data))) return ret;
+        if ((ret=input_rtcm3(rtcm,(uint8_t)data))) return ret;   /* ret!=0 indicates message complete */
+        if (rtcm->nbyte_invalid!=0) {               /* if last message had error: */
+            fseek(fp,-rtcm->nbyte_invalid+1,SEEK_CUR);  /* rewind to last preamble+1 */
+            i -= rtcm->nbyte_invalid-1;
+            trace(4,"rewind buff %3d bytes, i=%d\n",rtcm->nbyte_invalid-1,i);
+            rtcm->nbyte_invalid=0;
+        }
     }
     return 0; /* return at every 4k bytes */
 }

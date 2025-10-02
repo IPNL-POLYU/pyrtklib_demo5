@@ -75,6 +75,7 @@
 *                           suppress warning for buffer overflow by sprintf()
 *                           use integer types in stdint.h
 *-----------------------------------------------------------------------------*/
+//#define _POSIX_C_SOURCE 200809L
 #include <ctype.h>
 #include "rtklib.h"
 #ifndef WIN32
@@ -116,7 +117,7 @@
 #define NTRIP_RSP_HTTP      "HTTP/"     /* ntrip response: http */
 #define NTRIP_RSP_ERROR     "ERROR"     /* ntrip response: error */
 #define NTRIP_RSP_UNAUTH    "HTTP/1.0 401 Unauthorized\r\n"
-#define NTRIP_RSP_ERR_PWD   "ERROR - Bad Pasword\r\n"
+#define NTRIP_RSP_ERR_PWD   "ERROR - Bad Password\r\n"
 #define NTRIP_RSP_ERR_MNTP  "ERROR - Bad Mountpoint\r\n"
 
 #define FTP_CMD             "wget"      /* ftp/http command */
@@ -159,7 +160,7 @@ typedef struct {            /* file control type */
     double start;           /* start offset (s) */
     double speed;           /* replay speed (time factor) */
     double swapintv;        /* swap interval (hr) (0: no swap) */
-    lock_t lock;            /* lock flag */
+    rtklib_lock_t lock;     /* lock flag */
 } file_t;
 
 typedef struct {            /* tcp control type */
@@ -191,7 +192,7 @@ typedef struct {            /* serial control type */
     int state,wp,rp;        /* state,write/read pointer */
     int buffsize;           /* write buffer size (bytes) */
     HANDLE thread;          /* write thread */
-    lock_t lock;            /* lock flag */
+    rtklib_lock_t lock;     /* lock flag */
     uint8_t *buff;          /* write buffer */
 #endif
     tcpsvr_t *tcpsvr;       /* tcp server for received stream */
@@ -250,13 +251,13 @@ typedef struct {            /* ftp download control type */
     char local[1024];       /* local file path */
     int topts[4];           /* time options {poff,tint,toff,tretry} (s) */
     gtime_t tnext;          /* next retry time (gpst) */
-    thread_t thread;        /* download thread */
+    rtklib_thread_t thread; /* download thread */
 } ftp_t;
 
 typedef struct {            /* memory buffer type */
     int state,wp,rp;        /* state,write/read pointer */
     int bufsize;            /* buffer size (bytes) */
-    lock_t lock;            /* lock flag */
+    rtklib_lock_t lock;     /* lock flag */
     uint8_t *buf;           /* write buffer */
 } membuf_t;
 
@@ -285,12 +286,12 @@ static int readseribuff(serial_t *serial, uint8_t *buff, int nmax)
     
     tracet(5,"readseribuff: dev=%d\n",serial->dev);
     
-    lock(&serial->lock);
+    rtklib_lock(&serial->lock);
     for (ns=0;serial->rp!=serial->wp&&ns<nmax;ns++) {
        buff[ns]=serial->buff[serial->rp];
        if (++serial->rp>=serial->buffsize) serial->rp=0;
     }
-    unlock(&serial->lock);
+    rtklib_unlock(&serial->lock);
     tracet(5,"readseribuff: ns=%d rp=%d wp=%d\n",ns,serial->rp,serial->wp);
     return ns;
 }
@@ -300,7 +301,7 @@ static int writeseribuff(serial_t *serial, uint8_t *buff, int n)
     
     tracet(5,"writeseribuff: dev=%d n=%d\n",serial->dev,n);
     
-    lock(&serial->lock);
+    rtklib_lock(&serial->lock);
     for (ns=0;ns<n;ns++) {
         serial->buff[wp=serial->wp]=buff[ns];
         if (++wp>=serial->buffsize) wp=0;
@@ -310,7 +311,7 @@ static int writeseribuff(serial_t *serial, uint8_t *buff, int n)
             break;
         }
     }
-    unlock(&serial->lock);
+    rtklib_unlock(&serial->lock);
     tracet(5,"writeseribuff: ns=%d rp=%d wp=%d\n",ns,serial->rp,serial->wp);
     return ns;
 }
@@ -344,14 +345,14 @@ static DWORD WINAPI serialthread(void *arg)
 /* open serial ---------------------------------------------------------------*/
 static serial_t *openserial(const char *path, int mode, char *msg)
 {
-    const int br[]={
-        300,600,1200,2400,4800,9600,19200,38400,57600,115200,230400,460800,
-        921600
-    };
     serial_t *serial;
     int i,brate=115200,bsize=8,stopb=1,tcp_port=0;
     char *p,parity='N',dev[128],port[128],fctr[64]="",path_tcp[32],msg_tcp[128];
 #ifdef WIN32
+    const int br[]={
+        300,600,1200,2400,4800,9600,19200,38400,57600,115200,230400,460800,
+        921600
+    };
     DWORD error,rw=0,siz=sizeof(COMMCONFIG);
     COMMCONFIG cc={0};
     COMMTIMEOUTS co={MAXDWORD,0,0,0,0}; /* non-block-read */
@@ -359,10 +360,17 @@ static serial_t *openserial(const char *path, int mode, char *msg)
 #else
 #ifdef __APPLE__
     /* MacOS doesn't support higher baudrates (>230400B) */
+    const int br[]={
+        300,600,1200,2400,4800,9600,19200,38400,57600,115200,230400
+    };
     const speed_t bs[]={
         B300,B600,B1200,B2400,B4800,B9600,B19200,B38400,B57600,B115200,B230400
     };
 #else /* regular Linux with higher baudrates */
+    const int br[]={
+        300,600,1200,2400,4800,9600,19200,38400,57600,115200,230400,460800,
+        921600
+    };
     const speed_t bs[]={
         B300,B600,B1200,B2400,B4800,B9600,B19200,B38400,B57600,B115200,B230400,
         B460800,B921600
@@ -377,15 +385,16 @@ static serial_t *openserial(const char *path, int mode, char *msg)
     
     if ((p=strchr(path,':'))) {
         strncpy(port,path,p-path); port[p-path]='\0';
-        sscanf(p,":%d:%d:%c:%d:%s",&brate,&bsize,&parity,&stopb,fctr);
+        sscanf(p,":%d:%d:%c:%d:%63s",&brate,&bsize,&parity,&stopb,fctr);
     }
     else strcpy(port,path);
     
     if ((p=strchr(path,'#'))) {
         sscanf(p,"#%d",&tcp_port);
     }
-    for (i=0;i<13;i++) if (br[i]==brate) break;
-    if (i>=14) {
+    int nbr = sizeof(br) / sizeof(int);
+    for (i=0;i<nbr;i++) if (br[i]==brate) break;
+    if (i>=nbr) {
         sprintf(msg,"bitrate error (%d)",brate);
         tracet(1,"openserial: %s path=%s\n",msg,path);
         free(serial);
@@ -429,7 +438,7 @@ static serial_t *openserial(const char *path, int mode, char *msg)
     PurgeComm(serial->dev,PURGE_TXABORT|PURGE_RXABORT|PURGE_TXCLEAR|PURGE_RXCLEAR);
     
     /* create write thread */
-    initlock(&serial->lock);
+    rtklib_initlock(&serial->lock);
     serial->state=serial->wp=serial->rp=serial->error=0;
     serial->buffsize=buffsize;
     if (!(serial->buff=(uint8_t *)malloc(buffsize))) {
@@ -525,6 +534,7 @@ static int readserial(serial_t *serial, uint8_t *buff, int n, char *msg)
     
     /* write received stream to tcp server port */
     if (serial->tcpsvr&&nr>0) {
+        /* TODO handle no-blocking write ? */
         writetcpsvr(serial->tcpsvr,buff,(int)nr,msg_tcp);
     }
     return nr;
@@ -540,7 +550,12 @@ static int writeserial(serial_t *serial, uint8_t *buff, int n, char *msg)
 #ifdef WIN32
     if ((ns=writeseribuff(serial,buff,n))<n) serial->error=1;
 #else
-    if (write(serial->dev,buff,n)<n) {
+    ns=write(serial->dev,buff,n);
+    if (ns<0) {
+        if (errno==EAGAIN) {
+            /* TODO ?? */
+        }
+        ns = 0;
         serial->error=1;
     }
 #endif
@@ -579,7 +594,8 @@ static int openfile_(file_t *file, gtime_t time, char *msg)
     char *rw,tagpath[MAXSTRPATH+4]="";
     char tagh[TIMETAGH_LEN+1]="";
     
-    tracet(3,"openfile_: path=%s time=%s\n",file->path,time_str(time,0));
+    char tstr[40];
+    tracet(3,"openfile_: path=%s time=%s\n",file->path,time2str(time,tstr,0));
     
     file->time=utc2gpst(timeget());
     file->tick=file->tick_f=tickget();
@@ -710,7 +726,7 @@ static file_t *openfile(const char *path, int mode, char *msg)
     file->start=start;
     file->speed=speed;
     file->swapintv=swapintv;
-    initlock(&file->lock);
+    rtklib_initlock(&file->lock);
     
     time=utc2gpst(timeget());
     
@@ -735,7 +751,8 @@ static void swapfile(file_t *file, gtime_t time, char *msg)
 {
     char openpath[MAXSTRPATH];
     
-    tracet(3,"swapfile: fp=%d time=%s\n",file->fp,time_str(time,0));
+    char tstr[40];
+    tracet(3,"swapfile: fp=%d time=%s\n",file->fp,time2str(time,tstr,0));
     
     /* return if old swap file open */
     if (file->fp_tmp||file->fp_tag_tmp) return;
@@ -771,7 +788,7 @@ static int statefile(file_t *file)
 /* get extended state file ---------------------------------------------------*/
 static int statexfile(file_t *file, char *msg)
 {
-    char *p=msg,tstr1[32],tstr2[32];
+    char *p=msg,tstr1[40],tstr2[40];
     int state=file?2:0;
     
     p+=sprintf(p,"file:\n");
@@ -791,7 +808,7 @@ static int statexfile(file_t *file, char *msg)
     p+=sprintf(p,"  tick_f  = %u\n",file->tick_f);
     p+=sprintf(p,"  start   = %.3f\n",file->start);
     p+=sprintf(p,"  speed   = %.3f\n",file->speed);
-    p+=sprintf(p,"  swapintv= %.3f\n",file->swapintv);
+    sprintf(p,"  swapintv= %.3f\n",file->swapintv);
     return state;
 }
 /* read file -----------------------------------------------------------------*/
@@ -1022,72 +1039,109 @@ static int setsock(socket_t sock, char *msg)
     return 1;
 }
 /* non-block accept ----------------------------------------------------------*/
-static socket_t accept_nb(socket_t sock, struct sockaddr *addr, socklen_t *len)
+static socket_t accept_nb(socket_t sock, struct sockaddr *addr, socklen_t *len, int *err)
 {
-    struct timeval tv={0};
     fd_set rs;
-    int ret;
-    
-    FD_ZERO(&rs); FD_SET(sock,&rs);
-    ret=select(sock+1,&rs,NULL,NULL,&tv);
-    if (ret<=0) return (socket_t)ret;
-    return accept(sock,addr,len);
+    FD_ZERO(&rs); FD_SET(sock, &rs);
+    struct timeval tv = {0};
+    int ret = select(sock + 1, &rs, NULL, NULL, &tv);
+    if (ret == 0) {
+      *err = 0;
+      return (socket_t)ret;
+    }
+    if (ret < 0) {
+      *err = errsock();
+      return (socket_t)ret;
+    }
+    socket_t nsock = accept(sock, addr, len);
+    if (nsock == (socket_t)-1) {
+      *err = errsock();
+      return nsock;
+    }
+    *err = 0;
+    return nsock;
 }
 /* non-block connect ---------------------------------------------------------*/
-static int connect_nb(socket_t sock, struct sockaddr *addr, socklen_t len)
+static int connect_nb(socket_t sock, struct sockaddr *addr, socklen_t len, int *err)
 {
 #ifdef WIN32
     u_long mode=1; 
-    int err;
-    
     ioctlsocket(sock,FIONBIO,&mode);
     if (connect(sock,addr,len)==-1) {
-        err=errsock();
-        if (err==WSAEWOULDBLOCK||err==WSAEINPROGRESS||
-            err==WSAEALREADY   ||err==WSAEINVAL) return 0;
-        if (err!=WSAEISCONN) return -1;
+        *err=errsock();
+        if (*err==WSAEWOULDBLOCK||*err==WSAEINPROGRESS||
+            *err==WSAEALREADY   ||*err==WSAEINVAL) return 0;
+        if (*err!=WSAEISCONN) return -1;
     }
 #else
-    struct timeval tv={0};
-    fd_set rs,ws;
-    int err,flag;
-    
-    flag=fcntl(sock,F_GETFL,0);
-    fcntl(sock,F_SETFL,flag|O_NONBLOCK);
-    if (connect(sock,addr,len)==-1) {
-        err=errsock();
-        if (err!=EISCONN&&err!=EINPROGRESS&&err!=EALREADY) return -1;
-        FD_ZERO(&rs); FD_SET(sock,&rs); ws=rs;
-        if (select(sock+1,&rs,&ws,NULL,&tv)==0) return 0;
+    int flag = fcntl(sock, F_GETFL, 0);
+    fcntl(sock, F_SETFL, flag | O_NONBLOCK);
+    if (connect(sock, addr, len) == -1) {
+        *err = errsock();
+        if (*err != EISCONN && *err != EINPROGRESS && *err != EALREADY) return -1;
+        fd_set rs, ws;
+        FD_ZERO(&rs); FD_SET(sock, &rs); ws = rs;
+        struct timeval tv = {0};
+        if (select(sock + 1, &rs, &ws, NULL, &tv) == 0) {
+          *err = 0;
+          return 0;
+        }
+        *err = 0;
+        return 1;
     }
 #endif
+    *err = 0;
     return 1;
 }
 /* non-block receive ---------------------------------------------------------*/
-static int recv_nb(socket_t sock, uint8_t *buff, int n)
+static int recv_nb(socket_t sock, uint8_t *buff, int n, int *err)
 {
-    struct timeval tv={0};
     fd_set rs;
-    int ret,nr;
-    
-    FD_ZERO(&rs); FD_SET(sock,&rs);
-    ret=select(sock+1,&rs,NULL,NULL,&tv);
-    if (ret<=0) return ret;
-    nr=recv(sock,(char *)buff,n,0);
-    return nr<=0?-1:nr;
+    FD_ZERO(&rs); FD_SET(sock, &rs);
+    struct timeval tv = {0};
+    int ret = select(sock + 1, &rs, NULL, NULL, &tv);
+    if (ret < 0) {
+      *err = errsock();
+      return ret;
+    }
+    if (ret == 0) {
+      *err = 0;
+      return ret;
+    }
+    int nr = recv(sock, (char *)buff, n, 0);
+    if (nr == 0) {
+      *err = 0;
+      return -1;
+    }
+    if (nr < 0) {
+      *err = errsock();
+      return -1;
+    }
+    *err = 0;
+    return nr;
 }
 /* non-block send ------------------------------------------------------------*/
-static int send_nb(socket_t sock, uint8_t *buff, int n)
+static int send_nb(socket_t sock, uint8_t *buff, int n, int *err)
 {
-    struct timeval tv={0};
     fd_set ws;
-    int ret,ns;
-    
-    FD_ZERO(&ws); FD_SET(sock,&ws);
-    ret=select(sock+1,NULL,&ws,NULL,&tv);
-    if (ret<=0) return ret;
-    ns=send(sock,(char *)buff,n,0);
-    return ns<n?-1:ns;
+    FD_ZERO(&ws); FD_SET(sock, &ws);
+    struct timeval tv = {0};
+    int ret = select(sock + 1, NULL, &ws, NULL, &tv);
+    if (ret < 0) {
+      *err = errsock();
+      return ret;
+    }
+    if (ret == 0) {
+      *err = 0;
+      return ret;
+    }
+    int ns = send(sock, (char *)buff, n, 0);
+    if (ns < 0) {
+      *err = errsock();
+      return -1;
+    }
+    *err = 0;
+    return ns;
 }
 /* generate tcp socket -------------------------------------------------------*/
 static int gentcp(tcp_t *tcp, int type, char *msg)
@@ -1121,6 +1175,17 @@ static int gentcp(tcp_t *tcp, int type, char *msg)
         setsockopt(tcp->sock,SOL_SOCKET,SO_REUSEADDR,(const char *)&opt,
                    sizeof(opt));
 #endif
+        if(tcp->saddr[0])
+        {
+            if(!(hp=gethostbyname(tcp->saddr))) {
+                sprintf(msg,"address error (%s)",tcp->saddr);
+                tracet(1,"gentcp: gethostbyname error addr=%s err=%d\n",tcp->saddr,errsock());
+                closesocket(tcp->sock);
+                tcp->state=-1;
+                return 0;
+            }
+            memcpy(&tcp->addr.sin_addr,hp->h_addr,hp->h_length);
+        }
         if (bind(tcp->sock,(struct sockaddr *)&tcp->addr,sizeof(tcp->addr))==-1) {
             sprintf(msg,"bind error (%d) : %d",errsock(),tcp->port);
             tracet(1,"gentcp: bind error port=%d err=%d\n",tcp->port,errsock());
@@ -1133,6 +1198,7 @@ static int gentcp(tcp_t *tcp, int type, char *msg)
     else { /* client socket */
         if (!(hp=gethostbyname(tcp->saddr))) {
             sprintf(msg,"address error (%s)",tcp->saddr);
+            // h_errno ?
             tracet(1,"gentcp: gethostbyname error addr=%s err=%d\n",tcp->saddr,errsock());
             closesocket(tcp->sock);
             tcp->state=0;
@@ -1234,8 +1300,7 @@ static int accsock(tcpsvr_t *tcpsvr, char *msg)
         tracet(2,"accsock: too many clients sock=%d\n",tcpsvr->svr.sock);
         return 0;
     }
-    if ((sock=accept_nb(tcpsvr->svr.sock,(struct sockaddr *)&addr,&len))==(socket_t)-1) {
-        err=errsock();
+    if ((sock=accept_nb(tcpsvr->svr.sock,(struct sockaddr *)&addr,&len,&err))==(socket_t)-1) {
         sprintf(msg,"accept error (%d)",err);
         tracet(1,"accsock: accept error sock=%d err=%d\n",tcpsvr->svr.sock,err);
         closesocket(tcpsvr->svr.sock);
@@ -1279,8 +1344,8 @@ static int readtcpsvr(tcpsvr_t *tcpsvr, uint8_t *buff, int n, char *msg)
     for (i=0;i<MAXCLI;i++) {
         if (tcpsvr->cli[i].state!=2) continue;
         
-        if ((nr=recv_nb(tcpsvr->cli[i].sock,buff,n))==-1) {
-            if ((err=errsock())) {
+        if ((nr=recv_nb(tcpsvr->cli[i].sock,buff,n,&err))==-1) {
+            if (err) {
                 tracet(2,"readtcpsvr: recv error sock=%d err=%d\n",
                        tcpsvr->cli[i].sock,err);
             }
@@ -1306,8 +1371,8 @@ static int writetcpsvr(tcpsvr_t *tcpsvr, uint8_t *buff, int n, char *msg)
     for (i=0;i<MAXCLI;i++) {
         if (tcpsvr->cli[i].state!=2) continue;
         
-        if ((ns=send_nb(tcpsvr->cli[i].sock,buff,n))==-1) {
-            if ((err=errsock())) {
+        if ((ns=send_nb(tcpsvr->cli[i].sock,buff,n,&err))==-1) {
+            if (err) {
                 tracet(2,"writetcpsvr: send error i=%d sock=%d err=%d\n",i,
                        tcpsvr->cli[i].sock,err);
             }
@@ -1374,8 +1439,7 @@ static int consock(tcpcli_t *tcpcli, char *msg)
     }
     /* non-block connect */
     if ((stat=connect_nb(tcpcli->svr.sock,(struct sockaddr *)&tcpcli->svr.addr,
-                         sizeof(tcpcli->svr.addr)))==-1) {
-        err=errsock();
+                         sizeof(tcpcli->svr.addr),&err))==-1) {
         sprintf(msg,"connect error (%d)",err);
         tracet(2,"consock: connect error sock=%d err=%d\n",tcpcli->svr.sock,err);
         closesocket(tcpcli->svr.sock);
@@ -1455,8 +1519,8 @@ static int readtcpcli(tcpcli_t *tcpcli, uint8_t *buff, int n, char *msg)
     
     if (!waittcpcli(tcpcli,msg)) return 0;
     
-    if ((nr=recv_nb(tcpcli->svr.sock,buff,n))==-1) {
-        if ((err=errsock())) {
+    if ((nr=recv_nb(tcpcli->svr.sock,buff,n,&err))==-1) {
+        if (err) {
             tracet(2,"readtcpcli: recv error sock=%d err=%d\n",tcpcli->svr.sock,err);
             sprintf(msg,"recv error (%d)",err);
         }
@@ -1479,8 +1543,8 @@ static int writetcpcli(tcpcli_t *tcpcli, uint8_t *buff, int n, char *msg)
     
     if (!waittcpcli(tcpcli,msg)) return 0;
     
-    if ((ns=send_nb(tcpcli->svr.sock,buff,n))==-1) {
-        if ((err=errsock())) {
+    if ((ns=send_nb(tcpcli->svr.sock,buff,n,&err))==-1) {
+        if (err) {
             tracet(2,"writetcp: send error sock=%d err=%d\n",tcpcli->svr.sock,err);
             sprintf(msg,"send error (%d)",err);
         }
@@ -1572,25 +1636,23 @@ static int reqntrip_c(ntrip_t *ntrip, char *msg)
 /* test ntrip server response ------------------------------------------------*/
 static int rspntrip_s(ntrip_t *ntrip, char *msg)
 {
-    int i,nb;
-    char *p,*q;
-    
     tracet(3,"rspntrip_s: state=%d nb=%d\n",ntrip->state,ntrip->nb);
-    ntrip->buff[ntrip->nb]='0';
+    ntrip->buff[ntrip->nb]='\0';
     tracet(5,"rspntrip_s: n=%d buff=\n%s\n",ntrip->nb,ntrip->buff);
     
+    char *p;
     if ((p=strstr((char *)ntrip->buff,NTRIP_RSP_OK_SVR))) { /* ok */
-        q=(char *)ntrip->buff;
         p+=strlen(NTRIP_RSP_OK_SVR);
-        ntrip->nb-=p-q;
-        for (i=0;i<ntrip->nb;i++) *q++=*p++;
+        ntrip->nb-=p-(char *)ntrip->buff;
+        /* Discard all buffer content before the OK. */
+        memmove(ntrip->buff, p, ntrip->nb);
         ntrip->state=2;
         sprintf(msg,"%s/%s",ntrip->tcp->svr.saddr,ntrip->mntpnt);
         tracet(3,"rspntrip_s: response ok nb=%d\n",ntrip->nb);
         return 1;
     }
-    else if ((p=strstr((char *)ntrip->buff,NTRIP_RSP_ERROR))) { /* error */
-        nb=ntrip->nb<MAXSTATMSG?ntrip->nb:MAXSTATMSG;
+    else if (strstr((char *)ntrip->buff,NTRIP_RSP_ERROR)) { /* error */
+        int nb=ntrip->nb<MAXSTATMSG?ntrip->nb:MAXSTATMSG;
         sprintf(msg,"%.*s",nb,(char *)ntrip->buff);
         if ((p=strchr(msg,'\r'))) *p='\0';
         tracet(3,"rspntrip_s: %s nb=%d\n",msg,ntrip->nb);
@@ -1613,25 +1675,23 @@ static int rspntrip_s(ntrip_t *ntrip, char *msg)
 /* test ntrip client response ------------------------------------------------*/
 static int rspntrip_c(ntrip_t *ntrip, char *msg)
 {
-    int i;
-    char *p,*q;
-    
     tracet(3,"rspntrip_c: state=%d nb=%d\n",ntrip->state,ntrip->nb);
-    ntrip->buff[ntrip->nb]='0';
+    ntrip->buff[ntrip->nb]='\0';
     tracet(5,"rspntrip_c: n=%d buff=\n%s\n",ntrip->nb,ntrip->buff);
     
+    char *p;
     if ((p=strstr((char *)ntrip->buff,NTRIP_RSP_OK_CLI))) { /* ok */
-        q=(char *)ntrip->buff;
         p+=strlen(NTRIP_RSP_OK_CLI);
-        ntrip->nb-=p-q;
-        for (i=0;i<ntrip->nb;i++) *q++=*p++;
+        ntrip->nb-=p-(char *)ntrip->buff;
+        /* Discard all buffer content before the OK. */
+        memmove(ntrip->buff, p, ntrip->nb);
         ntrip->state=2;
         sprintf(msg,"%s/%s",ntrip->tcp->svr.saddr,ntrip->mntpnt);
         tracet(3,"rspntrip_c: response ok nb=%d\n",ntrip->nb);
-		ntrip->tcp->tirecon=ticonnect;
+        ntrip->tcp->tirecon=ticonnect;
         return 1;
     }
-    if ((p=strstr((char *)ntrip->buff,NTRIP_RSP_SRCTBL))) { /* source table */
+    if (strstr((char *)ntrip->buff,NTRIP_RSP_SRCTBL)) { /* source table */
         if (!*ntrip->mntpnt) { /* source table request */
             ntrip->state=2;
             sprintf(msg,"source table received");
@@ -1643,12 +1703,13 @@ static int rspntrip_c(ntrip_t *ntrip, char *msg)
         ntrip->nb=0;
         ntrip->buff[0]='\0';
         ntrip->state=0;
-		/* increase subsequent disconnect time to avoid too many reconnect requests */
+        /* increase subsequent disconnect time to avoid too many reconnect requests */
         if (ntrip->tcp->tirecon>300000) ntrip->tcp->tirecon=ntrip->tcp->tirecon*5/4;
 
         discontcp(&ntrip->tcp->svr,ntrip->tcp->tirecon);
     }
     else if ((p=strstr((char *)ntrip->buff,NTRIP_RSP_HTTP))) { /* http response */
+        char *q;
         if ((q=strchr(p,'\r'))) *q='\0'; else ntrip->buff[128]='\0';
         strcpy(msg,p);
         tracet(3,"rspntrip_s: %s nb=%d\n",msg,ntrip->nb);
@@ -1751,17 +1812,24 @@ static void closentrip(ntrip_t *ntrip)
 /* read ntrip ----------------------------------------------------------------*/
 static int readntrip(ntrip_t *ntrip, uint8_t *buff, int n, char *msg)
 {
-    int nb;
-    
     tracet(4,"readntrip:\n");
     
     if (!waitntrip(ntrip,msg)) return 0;
     
-    if (ntrip->nb>0) { /* read response buffer first */
-        nb=ntrip->nb<=n?ntrip->nb:n;
-        memcpy(buff,ntrip->buff+ntrip->nb-nb,nb);
-        ntrip->nb=0;
-        return nb;
+    if (ntrip->nb>0) {
+        /* Read from the response buffer first */
+        if (ntrip->nb <= n) {
+            /* Empty the buffer. */
+            int nb=ntrip->nb;
+            memcpy(buff,ntrip->buff,nb);
+            ntrip->nb=0;
+            return nb;
+        }
+        /* Partial use of the response buffer */
+        memcpy(buff,ntrip->buff,n);
+        memmove(ntrip->buff,ntrip->buff+n,ntrip->nb-n);
+        ntrip->nb-=n;
+        return n;
     }
     return readtcpcli(ntrip->tcp,buff,n,msg);
 }
@@ -1797,7 +1865,7 @@ static int statexntrip(ntrip_t *ntrip, char *msg)
     p+=sprintf(p,"  passwd  = %s\n",ntrip->passwd);
     p+=sprintf(p,"  str     = %s\n",ntrip->str);
     p+=sprintf(p,"  svr:\n");
-    p+=statextcp(&ntrip->tcp->svr,p);
+    statextcp(&ntrip->tcp->svr,p);
     return state;
 }
 /* open ntrip-caster ---------------------------------------------------------*/
@@ -1868,19 +1936,21 @@ static void send_srctbl(ntripc_t *ntripc, socket_t sock)
             NTRIP_RSP_TBLEND);
     p+=sprintf(p,"%s",NTRIP_RSP_SRCTBL);
     p+=sprintf(p,"Server: %s %s %s\r\n","RTKLIB",VER_RTKLIB,PATCH_LEVEL);
-    p+=sprintf(p,"Date: %s UTC\r\n",time_str(timeget(),0));
+    char tstr[40];
+    p+=sprintf(p,"Date: %s UTC\r\n",time2str(timeget(),tstr,0));
     p+=sprintf(p,"Connection: close\r\n");
     p+=sprintf(p,"Content-Type: text/plain\r\n");
     p+=sprintf(p,"Content-Length: %d\r\n\r\n",(int)strlen(srctbl));
-    send_nb(sock,(uint8_t *)buff,(int)(p-buff));
-    send_nb(sock,(uint8_t *)srctbl,(int)strlen(srctbl));
+    int err;
+    send_nb(sock,(uint8_t *)buff,(int)(p-buff),&err);
+    send_nb(sock,(uint8_t *)srctbl,(int)strlen(srctbl),&err);
 }
 /* test ntrip client request -------------------------------------------------*/
 static void rsp_ntripc(ntripc_t *ntripc, int i)
 {
     const char *rsp1=NTRIP_RSP_UNAUTH,*rsp2=NTRIP_RSP_OK_CLI;
     ntripc_con_t *con=ntripc->con+i;
-    char url[256]="",mntpnt[256]="",proto[256]="",user[513],user_pwd[256],*p,*q;
+    char url[256]="",mntpnt[256]="",proto[256]="",user[513],user_pwd[712],*p,*q;
     
     tracet(3,"rspntripc_c i=%d\n",i);
     con->buff[con->nb]='\0';
@@ -1921,17 +1991,20 @@ static void rsp_ntripc(ntripc_t *ntripc, int i)
         sprintf(user,"%s:%s",ntripc->user,ntripc->passwd);
         q=user_pwd;
         q+=sprintf(q,"Authorization: Basic ");
-        q+=encbase64(q,(uint8_t *)user,strlen(user));
+        encbase64(q,(uint8_t *)user,strlen(user));
+        strcat(user_pwd,"\r\n");
         if (!(p=strstr((char *)con->buff,"Authorization:"))||
             strncmp(p,user_pwd,strlen(user_pwd))) {
             tracet(2,"rsp_ntripc_c: authroziation error\n");
-            send_nb(ntripc->tcp->cli[i].sock,(uint8_t *)rsp1,strlen(rsp1));
+            int err;
+            send_nb(ntripc->tcp->cli[i].sock,(uint8_t *)rsp1,strlen(rsp1),&err);
             discon_ntripc(ntripc,i);
             return;
         }
     }
     /* send OK response */
-    send_nb(ntripc->tcp->cli[i].sock,(uint8_t *)rsp2,strlen(rsp2));
+    int err;
+    send_nb(ntripc->tcp->cli[i].sock,(uint8_t *)rsp2,strlen(rsp2),&err);
     
     con->state=1;
     strcpy(con->mntpnt,mntpnt);
@@ -1955,8 +2028,8 @@ static void wait_ntripc(ntripc_t *ntripc, char *msg)
         buff=ntripc->con[i].buff+ntripc->con[i].nb;
         nmax=NTRIP_MAXRSP-ntripc->con[i].nb-1;
         
-        if ((n=recv_nb(ntripc->tcp->cli[i].sock,buff,nmax))==-1) {
-            if ((err=errsock())) {
+        if ((n=recv_nb(ntripc->tcp->cli[i].sock,buff,nmax,&err))==-1) {
+            if (err) {
                 tracet(2,"wait_ntripc: recv error sock=%d err=%d\n",
                        ntripc->tcp->cli[i].sock,err);
             }
@@ -1982,10 +2055,10 @@ static int readntripc(ntripc_t *ntripc, uint8_t *buff, int n, char *msg)
     for (i=0;i<MAXCLI;i++) {
         if (!ntripc->con[i].state) continue;
         
-        nr=recv_nb(ntripc->tcp->cli[i].sock,buff,n);
+        nr=recv_nb(ntripc->tcp->cli[i].sock,buff,n,&err);
         
         if (nr<0) {
-            if ((err=errsock())) {
+            if (err) {
                 tracet(2,"readntripc: recv error i=%d sock=%d err=%d\n",i,
                        ntripc->tcp->cli[i].sock,err);
             }
@@ -2010,10 +2083,10 @@ static int writentripc(ntripc_t *ntripc, uint8_t *buff, int n, char *msg)
     for (i=0;i<MAXCLI;i++) {
         if (!ntripc->con[i].state) continue;
         
-        ns=send_nb(ntripc->tcp->cli[i].sock,buff,n);
+        ns=send_nb(ntripc->tcp->cli[i].sock,buff,n,&err);
         
         if (ns<n) {
-            if ((err=errsock())) {
+            if (err) {
                 tracet(2,"writentripc: send error i=%d sock=%d err=%d\n",i,
                        ntripc->tcp->cli[i].sock,err);
             }
@@ -2071,6 +2144,7 @@ static udp_t *genudp(int type, int port, const char *saddr, char *msg)
     strcpy(udp->saddr,saddr);
     
     if ((udp->sock=socket(AF_INET,SOCK_DGRAM,0))==(socket_t)-1) {
+        free(udp);
         sprintf(msg,"socket error (%d)",errsock());
         return NULL;
     }
@@ -2125,7 +2199,7 @@ static udp_t *openudpsvr(const char *path, char *msg)
     
     if (sscanf(sport,"%d",&port)<1) {
         sprintf(msg,"port error: %s",sport);
-        tracet(2,"openudpsvr: port error port=%s\n",port);
+        tracet(2,"openudpsvr: port error port=%s\n",sport);
         return NULL;
     }
     return genudp(0,port,"",msg);
@@ -2169,7 +2243,7 @@ static int statexudpsvr(udp_t *udpsvr, char *msg)
     if (!state) return 0;
     p+=sprintf(p,"  type    = %d\n",udpsvr->type);
     p+=sprintf(p,"  sock    = %d\n",(int)udpsvr->sock);
-    p+=sprintf(p,"  port    = %d\n",udpsvr->port);
+    sprintf(p,"  port    = %d\n",udpsvr->port);
     return state;
 }
 /* open udp client -----------------------------------------------------------*/
@@ -2222,7 +2296,7 @@ static int statexudpcli(udp_t *udpcli, char *msg)
     p+=sprintf(p,"  type    = %d\n",udpcli->type);
     p+=sprintf(p,"  sock    = %d\n",(int)udpcli->sock);
     p+=sprintf(p,"  addr    = %s\n",udpcli->saddr);
-    p+=sprintf(p,"  port    = %d\n",udpcli->port);
+    sprintf(p,"  port    = %d\n",udpcli->port);
     return state;
 }
 /* decode ftp path -----------------------------------------------------------*/
@@ -2258,7 +2332,7 @@ static void decodeftppath(const char *path, char *addr, char *file, char *user,
         if ((q=strchr(buff,':'))) {
              *q='\0'; if (passwd) strcpy(passwd,q+1);
         }
-        *q='\0'; if (user) strcpy(user,buff); 
+        if (user) strcpy(user,buff);
     }
     else p=buff;
     
@@ -2317,7 +2391,7 @@ static void *ftpthread(void *arg)
     reppath(ftp->file,remote,time,"","");
     
     if ((p=strrchr(remote,'/'))) p++; else p=remote;
-    sprintf(local,"%.768s%c%.254s",localdir,FILEPATHSEP,p);
+    sprintf(local,"%.768s%c%.254s",localdir,RTKLIB_FILEPATHSEP,p);
     sprintf(errfile,"%.1019s.err",local);
     
     /* if local file exist, skip download */
@@ -2501,7 +2575,7 @@ static membuf_t *openmembuf(const char *path, char *msg)
         return NULL;
     }
     membuf->bufsize=bufsize;
-    initlock(&membuf->lock);
+    rtklib_initlock(&membuf->lock);
     
     sprintf(msg,"membuf sizebuf=%d",bufsize);
     
@@ -2518,20 +2592,19 @@ static void closemembuf(membuf_t *membuf)
 /* read memory buffer --------------------------------------------------------*/
 static int readmembuf(membuf_t *membuf, uint8_t *buff, int n, char *msg)
 {
-    int i,nr=0;
-    
     tracet(4,"readmembuf: n=%d\n",n);
     
     if (!membuf) return 0;
     
-    lock(&membuf->lock);
+    rtklib_lock(&membuf->lock);
     
-    for (i=membuf->rp;i!=membuf->wp&&nr<n;i++) {
-        if (i>=membuf->bufsize) i=0;
+    size_t i=membuf->rp, nr=0;
+    while (i!=membuf->wp&&nr<n) {
         buff[nr++]=membuf->buf[i];
+        if (++i>=membuf->bufsize) i=0;
     }
     membuf->rp=i;
-    unlock(&membuf->lock);
+    rtklib_unlock(&membuf->lock);
     return nr;
 }
 /* write memory buffer -------------------------------------------------------*/
@@ -2543,7 +2616,7 @@ static int writemembuf(membuf_t *membuf, uint8_t *buff, int n, char *msg)
     
     if (!membuf) return 0;
     
-    lock(&membuf->lock);
+    rtklib_lock(&membuf->lock);
     
     for (i=0;i<n;i++) {
         membuf->buf[membuf->wp++]=buff[i];
@@ -2551,11 +2624,11 @@ static int writemembuf(membuf_t *membuf, uint8_t *buff, int n, char *msg)
         if (membuf->wp==membuf->rp) {
            strcpy(msg,"mem-buffer overflow");
            membuf->state=-1;
-           unlock(&membuf->lock);
+           rtklib_unlock(&membuf->lock);
            return i+1;
         }
     }
-    unlock(&membuf->lock);
+    rtklib_unlock(&membuf->lock);
     return i;
 }
 /* get state memory buffer ---------------------------------------------------*/
@@ -2574,7 +2647,7 @@ static int statexmembuf(membuf_t *membuf, char *msg)
     if (!state) return 0;
     p+=sprintf(p,"  buffsize= %d\n",membuf->bufsize);
     p+=sprintf(p,"  wp      = %d\n",membuf->wp);
-    p+=sprintf(p,"  rp      = %d\n",membuf->rp);
+    sprintf(p,"  rp      = %d\n",membuf->rp);
     return state;
 }
 /* initialize stream environment -----------------------------------------------
@@ -2607,7 +2680,7 @@ extern void strinit(stream_t *stream)
     stream->state=0;
     stream->inb=stream->inr=stream->outb=stream->outr=0;
     stream->tick_i=stream->tick_o=stream->tact=stream->inbt=stream->outbt=0;
-    initlock(&stream->lock);
+    rtklib_initlock(&stream->lock);
     stream->port=NULL;
     stream->path[0]='\0';
     stream->msg [0]='\0';
@@ -2628,8 +2701,8 @@ extern void strinit(stream_t *stream)
 *                                 STR_UDPSVR   = UDP server (read only)
 *                                 STR_UDPCLI   = UDP client (write only)
 *                                 STR_MEMBUF   = memory buffer (FIFO)
-*                                 STR_FTP      = download by FTP (raed only)
-*                                 STR_HTTP     = download by HTTP (raed only)
+*                                 STR_FTP      = download by FTP (read only)
+*                                 STR_HTTP     = download by HTTP (read only)
 *          int mode         I   stream mode (STR_MODE_???)
 *                                 STR_MODE_R   = read only
 *                                 STR_MODE_W   = write only
@@ -2812,8 +2885,8 @@ extern void strsync(stream_t *stream1, stream_t *stream2)
 * args   : stream_t *stream I  stream
 * return : none
 *-----------------------------------------------------------------------------*/
-extern void strlock  (stream_t *stream) {lock  (&stream->lock);}
-extern void strunlock(stream_t *stream) {unlock(&stream->lock);}
+extern void strlock  (stream_t *stream) {rtklib_lock  (&stream->lock);}
+extern void strunlock(stream_t *stream) {rtklib_unlock(&stream->lock);}
 
 /* read stream -----------------------------------------------------------------
 * read data from stream (unblocked)
@@ -3127,7 +3200,8 @@ static int gen_hex(const char *msg, uint8_t *buff)
     trace(4,"gen_hex: msg=%s\n",msg);
     
     strncpy(mbuff,msg,1023);
-    for (p=strtok(mbuff," ");p&&narg<256;p=strtok(NULL," ")) {
+    char *r;
+    for (p=strtok_r(mbuff," ",&r);p&&narg<256;p=strtok_r(NULL," ",&r)) {
         args[narg++]=p;
     }
     for (i=0;i<narg;i++) {

@@ -170,7 +170,7 @@ static int decode_sbstype2(const sbsmsg_t *msg, sbssat_t *sbssat)
         t0 =sbssat->sat[j].fcorr.t0;
         prc=sbssat->sat[j].fcorr.prc;
         sbssat->sat[j].fcorr.t0=gpst2time(msg->week,msg->tow);
-        sbssat->sat[j].fcorr.prc=getbits(msg->msg,18+i*12,12)*0.125f;
+        sbssat->sat[j].fcorr.prc=getbits(msg->msg,18+i*12,12)*0.125;
         sbssat->sat[j].fcorr.udre=udre+1;
         dt=timediff(sbssat->sat[j].fcorr.t0,t0);
         if (t0.time==0||dt<=0.0||18.0<dt||sbssat->sat[j].fcorr.ai==0) {
@@ -196,7 +196,8 @@ static int decode_sbstype6(const sbsmsg_t *msg, sbssat_t *sbssat)
     for (i=0;i<4;i++) {
         iodf[i]=getbitu(msg->msg,14+i*2,2);
     }
-    for (i=0;i<sbssat->nsat&&i<MAXSAT;i++) {
+    /* At most 51 entries in the message */
+    for (i=0;i<sbssat->nsat&&i<=51;i++) {
         if (sbssat->sat[i].fcorr.iodf!=iodf[i/13]) continue;
         udre=getbitu(msg->msg,22+i*4,4);
         sbssat->sat[i].fcorr.udre=udre+1;
@@ -215,7 +216,8 @@ static int decode_sbstype7(const sbsmsg_t *msg, sbssat_t *sbssat)
     
     sbssat->tlat=getbitu(msg->msg,14,4);
     
-    for (i=0;i<sbssat->nsat&&i<MAXSAT;i++) {
+    /* At most 51 entries in the message */
+    for (i=0;i<sbssat->nsat&&i<=51;i++) {
         sbssat->sat[i].fcorr.ai=getbitu(msg->msg,22+i*4,4);
     }
     return 1;
@@ -372,7 +374,7 @@ static int decode_sbstype24(const sbsmsg_t *msg, sbssat_t *sbssat)
         udre=getbitu(msg->msg,86+4*i,4);
         
         sbssat->sat[j].fcorr.t0  =gpst2time(msg->week,msg->tow);
-        sbssat->sat[j].fcorr.prc =getbits(msg->msg,14+i*12,12)*0.125f;
+        sbssat->sat[j].fcorr.prc =getbits(msg->msg,14+i*12,12)*0.125;
         sbssat->sat[j].fcorr.udre=udre+1;
         sbssat->sat[j].fcorr.iodf=iodf;
     }
@@ -385,7 +387,7 @@ static int decode_sbstype25(const sbsmsg_t *msg, sbssat_t *sbssat)
     
     return decode_longcorrh(msg,14,sbssat)&&decode_longcorrh(msg,120,sbssat);
 }
-/* decode type 26: ionospheric deley corrections -----------------------------*/
+/* decode type 26: ionospheric delay corrections -----------------------------*/
 static int decode_sbstype26(const sbsmsg_t *msg, sbsion_t *sbsion)
 {
     int i,j,block,delay,give,band=getbitu(msg->msg,14,4);
@@ -528,7 +530,7 @@ static int cmpmsgs(const void *p1, const void *p2)
 }
 /* read sbas message file ------------------------------------------------------
 * read sbas message file
-* args   : char     *file   I   sbas message file (wind-card * is expanded)
+* args   : char     *file   I   sbas message file (wild-card * is expanded)
 *          int      sel     I   sbas satellite prn number selection (0:all)
 *         (gtime_t  ts      I   start time)
 *         (gtime_t  te      I   end time  )
@@ -741,43 +743,44 @@ static void getmet(double lat, double *met)
         for (i=0;i<10;i++) met[i]=(1.0-a)*metprm[j-1][i]+a*metprm[j][i];
     }
 }
-/* tropospheric delay correction -----------------------------------------------
-* compute sbas tropospheric delay correction (mops model)
-* args   : gtime_t time     I   time
-*          double   *pos    I   receiver position {lat,lon,height} (rad/m)
-*          double   *azel   I   satellite azimuth/elavation (rad)
-*          double   *var    O   variance of troposphric error (m^2)
-* return : slant tropospheric delay (m)
-*-----------------------------------------------------------------------------*/
-extern double sbstropcorr(gtime_t time, const double *pos, const double *azel,
-                          double *var)
-{
-    const double k1=77.604,k2=382000.0,rd=287.054,gm=9.784,g=9.80665;
-    static double pos_[3]={0},zh=0.0,zw=0.0;
-    int i;
-    double c,met[10],sinel=sin(azel[1]),h=pos[2],m;
-    
-    trace(4,"sbstropcorr: pos=%.3f %.3f azel=%.3f %.3f\n",pos[0]*R2D,pos[1]*R2D,
-          azel[0]*R2D,azel[1]*R2D);
-    
-    if (pos[2]<-100.0||10000.0<pos[2]||azel[1]<=0) {
-        *var=0.0;
-        return 0.0;
-    }
-    if (zh==0.0||fabs(pos[0]-pos_[0])>1E-7||fabs(pos[1]-pos_[1])>1E-7||
-        fabs(pos[2]-pos_[2])>1.0) {
-        getmet(pos[0]*R2D,met);
-        c=cos(2.0*PI*(time2doy(time)-(pos[0]>=0.0?28.0:211.0))/365.25);
-        for (i=0;i<5;i++) met[i]-=met[i+5]*c;
-        zh=1E-6*k1*rd*met[0]/gm;
-        zw=1E-6*k2*rd/(gm*(met[4]+1.0)-met[3]*rd)*met[2]/met[1];
-        zh*=pow(1.0-met[3]*h/met[1],g/(rd*met[3]));
-        zw*=pow(1.0-met[3]*h/met[1],(met[4]+1.0)*g/(rd*met[3])-1.0);
-        for (i=0;i<3;i++) pos_[i]=pos[i];
-    }
-    m=1.001/sqrt(0.002001+sinel*sinel);
-    *var=0.12*0.12*m*m;
-    return (zh+zw)*m;
+/* Tropospheric delay correction -----------------------------------------------
+ * Compute SBAS tropospheric delay correction (mops model)
+ * Args   : gtime_t time     I   time
+ *          double   *pos    I   receiver position {lat,lon,height} (rad/m)
+ *          double   *azel   I   satellite azimuth/elavation (rad)
+ *          double   *var    O   variance of tropospheric error (m^2)
+ * Return : slant tropospheric delay (m)
+ *----------------------------------------------------------------------------*/
+extern double sbstropcorr(gtime_t time, const double *pos, const double *azel, double *var) {
+  const double k1 = 77.604, k2 = 382000.0, rd = 287.054, gm = 9.784, g = 9.80665;
+
+  trace(4, "sbstropcorr: pos=%.3f %.3f azel=%.3f %.3f\n", pos[0] * R2D, pos[1] * R2D, azel[0] * R2D,
+        azel[1] * R2D);
+
+  if (pos[2] < -100.0 || 10000.0 < pos[2] || azel[1] <= 0) {
+    *var = 0.0;
+    return 0.0;
+  }
+
+  static THREADLOCAL double pos_[3] = {0}, zh = 0.0, zw = 0.0;
+  if (zh == 0.0 || fabs(pos[0] - pos_[0]) > 1E-7 || fabs(pos[1] - pos_[1]) > 1E-7 ||
+      fabs(pos[2] - pos_[2]) > 1.0) {
+    double met[10];
+    getmet(pos[0] * R2D, met);
+    double c = cos(2.0 * PI * (time2doy(time) - (pos[0] >= 0.0 ? 28.0 : 211.0)) / 365.25);
+    for (int i = 0; i < 5; i++) met[i] -= met[i + 5] * c;
+    zh = 1E-6 * k1 * rd * met[0] / gm;
+    zw = 1E-6 * k2 * rd / (gm * (met[4] + 1.0) - met[3] * rd) * met[2] / met[1];
+    double h = pos[2];
+    zh *= pow(1.0 - met[3] * h / met[1], g / (rd * met[3]));
+    zw *= pow(1.0 - met[3] * h / met[1], (met[4] + 1.0) * g / (rd * met[3]) - 1.0);
+    for (int i = 0; i < 3; i++) pos_[i] = pos[i];
+  }
+
+  double sinel = sin(azel[1]);
+  double m = 1.001 / sqrt(0.002001 + sinel * sinel);
+  *var = 0.12 * 0.12 * m * m;
+  return (zh + zw) * m;
 }
 /* long term correction ------------------------------------------------------*/
 static int sbslongcorr(gtime_t time, int sat, const sbssat_t *sbssat,
@@ -793,8 +796,9 @@ static int sbslongcorr(gtime_t time, int sat, const sbssat_t *sbssat,
         if (p->sat!=sat||p->lcorr.t0.time==0) continue;
         t=timediff(time,p->lcorr.t0);
         if (fabs(t)>MAXSBSAGEL) {
+            char tstr[40];
             trace(2,"sbas long-term correction expired: %s sat=%2d t=%5.0f\n",
-                  time_str(time,0),sat,t);
+                  time2str(time,tstr,0),sat,t);
             return 0;
         }
         for (i=0;i<3;i++) drs[i]=p->lcorr.dpos[i]+p->lcorr.dvel[i]*t;
@@ -808,7 +812,8 @@ static int sbslongcorr(gtime_t time, int sat, const sbssat_t *sbssat,
     /* if sbas satellite without correction, no correction applied */
     if (satsys(sat,NULL)==SYS_SBS) return 1;
     
-    trace(2,"no sbas long-term correction: %s sat=%2d\n",time_str(time,0),sat);
+    char tstr[40];
+    trace(2,"no sbas long-term correction: %s sat=%2d\n",time2str(time,tstr,0),sat);
     return 0;
 }
 /* fast correction -----------------------------------------------------------*/
@@ -839,7 +844,8 @@ static int sbsfastcorr(gtime_t time, int sat, const sbssat_t *sbssat,
               *prc,sqrt(*var),t);
         return 1;
     }
-    trace(2,"no sbas fast correction: %s sat=%2d\n",time_str(time,0),sat);
+    char tstr[40];
+    trace(2,"no sbas fast correction: %s sat=%2d\n",time2str(time,tstr,0),sat);
     return 0;
 }
 /* sbas satellite ephemeris and clock correction -------------------------------

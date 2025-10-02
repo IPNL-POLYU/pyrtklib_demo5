@@ -470,7 +470,7 @@ extern int tle_name_read(const char *file, tle_t *tle)
 
         desig[0]='\0';
 
-        if (sscanf(buff,"%s %s %s",name,satno,desig)<2) continue;
+        if (sscanf(buff,"%255s %255s %255s",name,satno,desig)<2) continue;
         satno[5]='\0';
 
         for (i=0;i<tle->n;i++) {
@@ -522,8 +522,16 @@ extern int tle_pos(gtime_t time, const char *name, const char *satno,
     double R1[9]={0},R2[9]={0},R3[9]={0},W[9],erpv[5]={0};
     int i=0,j,k,stat=1;
 
-    /* binary search by satellite name or alias if name is empty */
+    /* serial search by satellite name or alias if name is empty */
     if (*name) {
+        for (i=0;i<tle->n;i++) {
+          if (!(stat=strcmp(name,tle->data[i].name)) ||
+              ( (tle->data[i].name[0]=='\0') &&
+               !(stat=strcmp(name,tle->data[i].alias)))) break;
+        }
+        if (i<tle->n) stat=0;
+	    /* binary search by satellite name or alias if name is empty */        
+        /*
         for (i=j=0,k=tle->n-1;j<=k;) {
             i=(j+k)/2;
             if (!(stat=strcmp(name,tle->data[i].name)) ||
@@ -531,6 +539,7 @@ extern int tle_pos(gtime_t time, const char *name, const char *satno,
                  !(stat=strcmp(name,tle->data[i].alias)))) break;
             if (stat<0) k=i-1; else j=i+1;
         }
+         */
     }
     /* serial search by catalog no or international designator */
     if (stat&&(*satno||*desig)) {
@@ -562,12 +571,12 @@ extern int tle_pos(gtime_t time, const char *name, const char *satno,
     R1[0]=1.0; R1[4]=R1[8]=cos(-erpv[1]); R1[7]=sin(-erpv[1]); R1[5]=-R1[7];
     R2[4]=1.0; R2[0]=R2[8]=cos(-erpv[0]); R2[2]=sin(-erpv[0]); R2[6]=-R2[2];
     R3[8]=1.0; R3[0]=R3[4]=cos(gmst); R3[3]=sin(gmst); R3[1]=-R3[3];
-    matmul("NN",3,1,3,1.0,R3,rs_tle  ,0.0,rs_pef  );
-    matmul("NN",3,1,3,1.0,R3,rs_tle+3,0.0,rs_pef+3);
+    matmul("NN",3,1,3,R3,rs_tle  ,rs_pef  );
+    matmul("NN",3,1,3,R3,rs_tle+3,rs_pef+3);
     rs_pef[3]+=OMGE*rs_pef[1];
     rs_pef[4]-=OMGE*rs_pef[0];
-    matmul("NN",3,3,3,1.0,R1,R2,0.0,W);
-    matmul("NN",3,1,3,1.0,W,rs_pef  ,0.0,rs  );
-    matmul("NN",3,1,3,1.0,W,rs_pef+3,0.0,rs+3);
+    matmul("NN",3,3,3,R1,R2,W);
+    matmul("NN",3,1,3,W,rs_pef  ,rs  );
+    matmul("NN",3,1,3,W,rs_pef+3,rs+3);
     return 1;
 }

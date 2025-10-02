@@ -14,6 +14,7 @@
 *                            limit max number of download paths
 *                            use integer types in stdint.h
 *-----------------------------------------------------------------------------*/
+#define _POSIX_C_SOURCE 200809L
 #include <errno.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -95,7 +96,7 @@ static char *parse_str(char *buff, char *str, int nmax)
 {
     char *p,*q,sep[]=" \r\n";
     
-    for (p=buff;*p&&*p==' ';p++) ;
+    for (p=buff;*p==' ';p++) ;
     
     if (*p=='"') sep[0]=*p++; /* enclosed within quotation marks */
     
@@ -112,8 +113,9 @@ static int cmp_str(const char *str1, const char *str2)
     
     sprintf(s1,"^%s$",str1);
     sprintf(s2,"^%s$",str2);
-    
-    for (p=s1,q=strtok(s2,"*");q;q=strtok(NULL,"*")) {
+
+    char *r;
+    for (p=s1,q=strtok_r(s2,"*",&r);q;q=strtok_r(NULL,"*",&r)) {
         if ((p=strstr(p,q))) p+=strlen(q); else break;
     }
     return p!=NULL;
@@ -127,7 +129,7 @@ static void remot2local(const char *remot, const char *dir, char *local)
     else if ((p=strrchr(remot,'/'))) p++;
     else p=(char *)remot;
     
-    sprintf(local,"%s%c%s",dir,FILEPATHSEP,p);
+    sprintf(local,"%s%c%s",dir,RTKLIB_FILEPATHSEP,p);
 }
 /* test file existence -------------------------------------------------------*/
 static int exist_file(const char *local)
@@ -246,7 +248,7 @@ static int gen_path(gtime_t time, gtime_t time_p, int seqnos, int seqnoe,
 }
 /* generate download paths ---------------------------------------------------*/
 static int gen_paths(gtime_t time, gtime_t time_p, int seqnos, int seqnoe,
-                     const url_t *url, char **stas, int nsta, const char *dir,
+                     const url_t *url, const char **stas, int nsta, const char *dir,
                      paths_t *paths)
 {
     int i;
@@ -292,7 +294,7 @@ static int mkdir_r(const char *dir)
     if (!*dir||!strcmp(dir+1,":\\")) return 1;
     
     strcpy(pdir,dir);
-    if ((p=strrchr(pdir,FILEPATHSEP))) {
+    if ((p=strrchr(pdir,RTKLIB_FILEPATHSEP))) {
         *p='\0';
         h=FindFirstFile(pdir,&data);
         if (h==INVALID_HANDLE_VALUE) {
@@ -311,7 +313,7 @@ static int mkdir_r(const char *dir)
     if (!*dir) return 1;
     
     strcpy(pdir,dir);
-    if ((p=strrchr(pdir,FILEPATHSEP))) {
+    if ((p=strrchr(pdir,RTKLIB_FILEPATHSEP))) {
         *p='\0';
         if (!(fp=fopen(pdir,"r"))) {
             if (!mkdir_r(pdir)) return 0;
@@ -330,7 +332,6 @@ static int get_list(const path_t *path, const char *usr, const char *pwd,
 {
     FILE *fp;
     char cmd[4096],env[1024]="",remot[1024],*opt="",*opt2="",*p;
-    int stat;
     
 #ifndef WIN32
     opt2=" -o /dev/null";
@@ -362,7 +363,7 @@ static int rep_paths(path_t *path, const char *file)
     strcpy(buff1,path->remot);
     strcpy(buff2,path->local);
     if ((p=strrchr(buff1,'/'))) p++; else p=buff1;
-    if ((q=strrchr(buff2,FILEPATHSEP))) q++; else q=buff2;
+    if ((q=strrchr(buff2,RTKLIB_FILEPATHSEP))) q++; else q=buff2;
     strcpy(p,file);
     strcpy(q,file);
     
@@ -388,7 +389,12 @@ static int test_list(path_t *path)
     
     if (!(fp=fopen(FTP_LISTING,"r"))) return 1;
     
-    if ((p=strrchr(path->remot,'/'))) file=p+1; else return 1;
+    if ((p=strrchr(path->remot,'/')))
+        file=p+1;
+    else {
+        fclose(fp);
+        return 1;
+    }
     
     /* search file in remote file list */
     while (fgets(buff,sizeof(buff),fp)) {
@@ -434,7 +440,7 @@ static int exec_down(path_t *path, char *remot_p, const char *usr,
     opt2=" 2> /dev/null";
 #endif
     strcpy(dir,path->local);
-    if ((p=strrchr(dir,FILEPATHSEP))) *p='\0';
+    if ((p=strrchr(dir,RTKLIB_FILEPATHSEP))) *p='\0';
     
     if      (!strncmp(path->remot,"ftp://"  ,6)) proto=0;
     else if (!strncmp(path->remot,"ftps://" ,7)) proto=2;
@@ -562,17 +568,16 @@ static int test_local(gtime_t ts, gtime_t te, double ti, const char *path,
     int stat,abort=0;
     
     for (time=ts;timediff(time,te)<=1E-3;time=timeadd(time,ti)) {
-        
-        sprintf(str,"%s->%s",path,local);
-        
-        if (showmsg(str)) {
-            abort=1;
-            break;
-        }
         genpath(path,sta,time,0,remot);
         genpath(dir ,sta,time,0,dir_t);
         remot2local(remot,dir_t,local);
         
+        sprintf(str,"%s->%s",path,local);
+        if (showmsg(str)) {
+            abort=1;
+            break;
+        }
+
         stat=test_file(local);
         
         fprintf(fp," %s",stat==0?"-":(stat==1?"o":"z"));
@@ -586,7 +591,7 @@ static int test_local(gtime_t ts, gtime_t te, double ti, const char *path,
 }
 /* test local files ----------------------------------------------------------*/
 static int test_locals(gtime_t ts, gtime_t te, double ti, const url_t *url,
-                       char **stas, int nsta, const char *dir, int *nc, int *nt,
+                       const char **stas, int nsta, const char *dir, int *nc, int *nt,
                        FILE *fp)
 {
     int i;
@@ -610,7 +615,7 @@ static int test_locals(gtime_t ts, gtime_t te, double ti, const url_t *url,
     return 0;
 }
 /* print total count of local files ------------------------------------------*/
-static int print_total(const url_t *url, char **stas, int nsta, int *nc,
+static int print_total(const url_t *url, const char **stas, int nsta, int *nc,
                        int *nt, FILE *fp)
 {
     int i;
@@ -667,7 +672,7 @@ static int print_total(const url_t *url, char **stas, int nsta, int *nc,
 *        %r -> rrrr    : station name
 *        %{env} -> env : environment variable
 *-----------------------------------------------------------------------------*/
-extern int dl_readurls(const char *file, char **types, int ntype, url_t *urls,
+extern int dl_readurls(const char *file, const char **types, int ntype, url_t *urls,
                        int nmax)
 {
     FILE *fp;
@@ -723,7 +728,8 @@ extern int dl_readstas(const char *file, char **stas, int nmax)
     }
     while (fgets(buff,sizeof(buff),fp)&&n<nmax) {
         if ((p=strchr(buff,'#'))) *p='\0';
-        for (p=strtok(buff," \r\n");p&&n<nmax;p=strtok(NULL," \r\n")) {
+        char *r;
+        for (p=strtok_r(buff," \r\n",&r);p&&n<nmax;p=strtok_r(NULL," \r\n",&r)) {
             strcpy(stas[n++],p);
         }
     }
@@ -767,7 +773,7 @@ extern int dl_readstas(const char *file, char **stas, int nmax)
 *          not downloaded.
 *-----------------------------------------------------------------------------*/
 extern int dl_exec(gtime_t ts, gtime_t te, double ti, int seqnos, int seqnoe,
-                   const url_t *urls, int nurl, char **stas, int nsta,
+                   const url_t *urls, int nurl, const char **stas, int nsta,
                    const char *dir, const char *usr, const char *pwd,
                    const char *proxy, int opts, char *msg, FILE *fp)
 {
@@ -834,7 +840,7 @@ extern int dl_exec(gtime_t ts, gtime_t te, double ti, int seqnos, int seqnoe,
 * return : status (1:ok,0:error,-1:aborted)
 *-----------------------------------------------------------------------------*/
 extern void dl_test(gtime_t ts, gtime_t te, double ti, const url_t *urls,
-                    int nurl, char **stas, int nsta, const char *dir,
+                    int nurl, const char **stas, int nsta, const char *dir,
                     int ncol, int datefmt, FILE *fp)
 {
     gtime_t time;
@@ -843,9 +849,10 @@ extern void dl_test(gtime_t ts, gtime_t te, double ti, const url_t *urls,
     int i,j,n,m,*nc,*nt,week,flag,abort=0;
     
     if (ncol<1) ncol=1; else if (ncol>200) ncol=200;
-     
+
+    char tstr[40];
     fprintf(fp,"** LOCAL DATA AVAILABILITY (%s, %s) **\n\n",
-            time_str(timeget(),0),*dir?dir:"*");
+            time2str(timeget(),tstr,0),*dir?dir:"*");
     
     for (i=n=0;i<nurl;i++) {
         n+=strstr(urls[i].path,"%s")||strstr(urls[i].path,"%S")?nsta:1;

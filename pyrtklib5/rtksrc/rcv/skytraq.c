@@ -44,6 +44,7 @@
 *                           use integer type in stdint.h
 *                           suppress warnings
 *-----------------------------------------------------------------------------*/
+#define _POSIX_C_SOURCE 200809L
 #include "rtklib.h"
 
 #define STQSYNC1    0xA0        /* skytraq binary sync code 1 */
@@ -269,7 +270,7 @@ static int decode_stqraw(raw_t *raw)
         raw->obs.data[n].P[0]=pr1;
         raw->obs.data[n].L[0]=cp1;
         raw->obs.data[n].D[0]=!(ind&2)?0.0:R4(p+18);
-        raw->obs.data[n].SNR[0]=(uint16_t)(U1(p+1)/SNR_UNIT+0.5);
+        raw->obs.data[n].SNR[0]=U1(p+1);
         raw->obs.data[n].LLI[0]=0;
         raw->obs.data[n].code[0]=sys==SYS_CMP?CODE_L2I:CODE_L1C;
         
@@ -288,8 +289,8 @@ static int decode_stqraw(raw_t *raw)
         
         for (j=1;j<NFREQ+NEXOBS;j++) {
             raw->obs.data[n].L[j]=raw->obs.data[n].P[j]=0.0;
-            raw->obs.data[n].D[j]=0.0;
-            raw->obs.data[n].SNR[j]=raw->obs.data[n].LLI[j]=0;
+            raw->obs.data[n].D[j]=raw->obs.data[n].SNR[j]=0.0;
+            raw->obs.data[n].LLI[j]=0;
             raw->obs.data[n].code[j]=CODE_NONE;
         }
         n++;
@@ -348,8 +349,8 @@ static int decode_stqrawx(raw_t *raw)
             raw->obs.data[n].rcv=0;
             for (k=0;k<NFREQ+NEXOBS;k++) {
                 raw->obs.data[n].L[k]=raw->obs.data[n].P[k]=0.0;
-                raw->obs.data[n].D[k]=0.0;
-                raw->obs.data[n].SNR[k]=raw->obs.data[n].LLI[k]=0;
+                raw->obs.data[n].D[k]=raw->obs.data[n].SNR[k]=0.0;
+                raw->obs.data[n].LLI[k]=0;
                 raw->obs.data[n].code[k]=CODE_NONE;
             }
             n++;
@@ -357,7 +358,7 @@ static int decode_stqrawx(raw_t *raw)
         raw->obs.data[j].P[idx]=pr1;
         raw->obs.data[j].L[idx]=cp1;
         raw->obs.data[j].D[idx]=!(ind&2)?0.0:R4(p+20);
-        raw->obs.data[j].SNR[idx]=(uint16_t)(U1(p+3)/SNR_UNIT+0.5);
+        raw->obs.data[j].SNR[idx]=U1(p+3);
         raw->obs.data[j].LLI[idx]=0;
         raw->obs.data[j].code[idx]=sig;
 
@@ -493,7 +494,8 @@ static int decode_ephem(int sat, raw_t *raw)
     
     trace(4,"decode_ephem: sat=%2d\n",sat);
     
-    if (!decode_frame(raw->subfrm[sat-1],&eph,NULL,NULL,NULL)) return 0;
+    int sys = satsys(sat, NULL);
+    if (!decode_frame(raw->subfrm[sat-1],sys,&eph,NULL,NULL,NULL)) return 0;
     
     if (!strstr(raw->opt,"-EPHALL")) {
         if (eph.iode==raw->nav.eph[sat-1].iode&&
@@ -513,12 +515,12 @@ static int decode_alm1(int sat, raw_t *raw)
     trace(4,"decode_alm1 : sat=%2d\n",sat);
     
     if (sys==SYS_GPS) {
-        decode_frame(raw->subfrm[sat-1],NULL,raw->nav.alm,raw->nav.ion_gps,
+        decode_frame(raw->subfrm[sat-1],sys,NULL,raw->nav.alm,raw->nav.ion_gps,
                      raw->nav.utc_gps);
         adj_utcweek(raw->time,raw->nav.utc_gps);
     }
     else if (sys==SYS_QZS) {
-        decode_frame(raw->subfrm[sat-1],NULL,raw->nav.alm,raw->nav.ion_qzs,
+        decode_frame(raw->subfrm[sat-1],sys,NULL,raw->nav.alm,raw->nav.ion_qzs,
                      raw->nav.utc_qzs);
         adj_utcweek(raw->time,raw->nav.utc_qzs);
     }
@@ -532,10 +534,10 @@ static int decode_alm2(int sat, raw_t *raw)
     trace(4,"decode_alm2 : sat=%2d\n",sat);
     
     if (sys==SYS_GPS) {
-        decode_frame(raw->subfrm[sat-1],NULL,raw->nav.alm,NULL,NULL);
+        decode_frame(raw->subfrm[sat-1],sys,NULL,raw->nav.alm,NULL,NULL);
     }
     else if (sys==SYS_QZS) {
-        decode_frame(raw->subfrm[sat-1],NULL,raw->nav.alm,raw->nav.ion_qzs,
+        decode_frame(raw->subfrm[sat-1],sys,NULL,raw->nav.alm,raw->nav.ion_qzs,
                      raw->nav.utc_qzs);
         adj_utcweek(raw->time,raw->nav.utc_qzs);
     }
@@ -873,7 +875,8 @@ extern int gen_stq(const char *msg, uint8_t *buff)
     trace(4,"gen_stq: msg=%s\n",msg);
     
     strcpy(mbuff,msg);
-    for (p=strtok(mbuff," ");p&&narg<32;p=strtok(NULL," ")) {
+    char *r;
+    for (p=strtok_r(mbuff," ",&r);p&&narg<32;p=strtok_r(NULL," ",&r)) {
         args[narg++]=p;
     }
     if (narg<1) {

@@ -15,6 +15,18 @@ extern void satno2id(int sat,Arr1D<char> Sid){
     satno2id(sat, id);
 
 }
+extern double dot2(Arr1D<double> Sa,Arr1D<double> Sb){
+    const double *a = Sa.src;
+    const double *b = Sb.src;
+    auto tmp = dot2(a, b);
+    return tmp;
+}
+extern double dot3(Arr1D<double> Sa,Arr1D<double> Sb){
+    const double *a = Sa.src;
+    const double *b = Sb.src;
+    auto tmp = dot3(a, b);
+    return tmp;
+}
 extern double dot (Arr1D<double> Sa,Arr1D<double> Sb, int n){
     const double *a = Sa.src;
     const double *b = Sb.src;
@@ -45,11 +57,25 @@ extern void matcpy(Arr1D<double> SA,Arr1D<double> SB, int n, int m){
     matcpy(A, B, n, m);
 
 }
-extern void matmul(const char *tr, int n, int k, int m, double alpha,Arr1D<double> SA,Arr1D<double> SB, double beta,Arr1D<double> SC){
+extern void matmul(const char *tr, int n, int k, int m,Arr1D<double> SA,Arr1D<double> SB,Arr1D<double> SC){
     const double *A = SA.src;
     const double *B = SB.src;
     double *C = SC.src;
-    matmul(tr, n, k, m, alpha, A, B, beta, C);
+    matmul(tr, n, k, m, A, B, C);
+
+}
+extern void matmulp(const char *tr, int n, int k, int m,Arr1D<double> SA,Arr1D<double> SB,Arr1D<double> SC){
+    const double *A = SA.src;
+    const double *B = SB.src;
+    double *C = SC.src;
+    matmulp(tr, n, k, m, A, B, C);
+
+}
+extern void matmulm(const char *tr, int n, int k, int m,Arr1D<double> SA,Arr1D<double> SB,Arr1D<double> SC){
+    const double *A = SA.src;
+    const double *B = SB.src;
+    double *C = SC.src;
+    matmulm(tr, n, k, m, A, B, C);
 
 }
 extern int  matinv(Arr1D<double> SA, int n){
@@ -96,16 +122,15 @@ extern void matprint (Arr1D<double> SA, int n, int m, int p, int q){
     matprint(A, n, m, p, q);
 
 }
-extern void matfprint(Arr1D<double> SA, int n, int m, int p, int q, const char *Ffp, const char *mode){
+extern void matfprint(Arr1D<double> SA, int n, int m, int p, int q, FileWrapper &Ffp){
     const double *A = SA.src;
-	FILE *fp = fopen(Ffp,mode);
+	FILE *fp = Ffp.file;
     matfprint(A, n, m, p, q, fp);
-	fclose(fp);
 
 }
-extern void    time2str(gtime_t t,Arr1D<char> Sstr, int n){
-    char *str = Sstr.src;
-    time2str(t, str, n);
+extern void    setstr(Arr1D<char> Sdst, const char *src, int n){
+    char *dst = Sdst.src;
+    setstr(dst, src, n);
 
 }
 extern gtime_t epoch2time(Arr1D<double> Sep){
@@ -218,7 +243,7 @@ extern void readpos(const char *file, const char *rcv,Arr1D<double> Spos){
 
 }
 extern int  readblq(const char *file, const char *sta,Arr1D<double> Sodisp){
-    double *odisp = Sodisp.src;
+    double (*odisp)[11][3] = reinterpret_cast<double(*)[11][3]>(Sodisp.src);
     auto tmp = readblq(file, sta, odisp);
     return tmp;
 }
@@ -227,14 +252,14 @@ extern int  geterp (const erp_t *erp, gtime_t time,Arr1D<double> Sval){
     auto tmp = geterp(erp, time, val);
     return tmp;
 }
-extern void tracemat (int level,Arr1D<double> SA, int n, int m, int p, int q){
+extern void tracemat_impl (int level,Arr1D<double> SA, int n, int m, int p, int q){
     const double *A = SA.src;
-    tracemat(level, A, n, m, p, q);
+    tracemat_impl(level, A, n, m, p, q);
 
 }
-extern void traceb   (int level,Arr1D<uint8_t> Sp, int n){
+extern void traceb_impl   (int level,Arr1D<uint8_t> Sp, int n){
     const uint8_t *p = Sp.src;
-    traceb(level, p, n);
+    traceb_impl(level, p, n);
 
 }
 extern int expath (const char *path,std::vector<std::string> Dpaths, int nmax){
@@ -342,7 +367,7 @@ extern void sunmoonpos(gtime_t tutc,Arr1D<double> Serpv,Arr1D<double> Srsun,Arr1
 }
 extern void tidedisp(gtime_t tutc,Arr1D<double> Srr, int opt, const erp_t *erp,Arr1D<double> Sodisp,Arr1D<double> Sdr){
     const double *rr = Srr.src;
-    const double *odisp = Sodisp.src;
+    const double (*odisp)[11][3] = reinterpret_cast<const double(*)[11][3]>(Sodisp.src);
     double *dr = Sdr.src;
     tidedisp(tutc, rr, opt, erp, odisp, dr);
 
@@ -362,76 +387,64 @@ extern int jgd2tokyo(Arr1D<double> Spos){
     auto tmp = jgd2tokyo(pos);
     return tmp;
 }
-extern int outrnxobsh(const char *Ffp, const char *mode, const rnxopt_t *opt, const nav_t *nav){
-	FILE *fp = fopen(Ffp,mode);
+extern int outrnxobsh(FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav){
+	FILE *fp = Ffp.file;
     auto tmp = outrnxobsh(fp, opt, nav);
-	fclose(fp);
     return tmp;
 }
-extern int outrnxobsb(const char *Ffp, const char *mode, const rnxopt_t *opt, const obsd_t *obs, int n, int epflag){
-	FILE *fp = fopen(Ffp,mode);
+extern int outrnxobsb(FileWrapper &Ffp, const rnxopt_t *opt, const obsd_t *obs, int n, int epflag){
+	FILE *fp = Ffp.file;
     auto tmp = outrnxobsb(fp, opt, obs, n, epflag);
-	fclose(fp);
     return tmp;
 }
-extern int outrnxnavh (const char *Ffp, const char *mode, const rnxopt_t *opt, const nav_t *nav){
-	FILE *fp = fopen(Ffp,mode);
+extern int outrnxnavh (FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav){
+	FILE *fp = Ffp.file;
     auto tmp = outrnxnavh(fp, opt, nav);
-	fclose(fp);
     return tmp;
 }
-extern int outrnxgnavh(const char *Ffp, const char *mode, const rnxopt_t *opt, const nav_t *nav){
-	FILE *fp = fopen(Ffp,mode);
+extern int outrnxgnavh(FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav){
+	FILE *fp = Ffp.file;
     auto tmp = outrnxgnavh(fp, opt, nav);
-	fclose(fp);
     return tmp;
 }
-extern int outrnxhnavh(const char *Ffp, const char *mode, const rnxopt_t *opt, const nav_t *nav){
-	FILE *fp = fopen(Ffp,mode);
+extern int outrnxhnavh(FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav){
+	FILE *fp = Ffp.file;
     auto tmp = outrnxhnavh(fp, opt, nav);
-	fclose(fp);
     return tmp;
 }
-extern int outrnxlnavh(const char *Ffp, const char *mode, const rnxopt_t *opt, const nav_t *nav){
-	FILE *fp = fopen(Ffp,mode);
+extern int outrnxlnavh(FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav){
+	FILE *fp = Ffp.file;
     auto tmp = outrnxlnavh(fp, opt, nav);
-	fclose(fp);
     return tmp;
 }
-extern int outrnxqnavh(const char *Ffp, const char *mode, const rnxopt_t *opt, const nav_t *nav){
-	FILE *fp = fopen(Ffp,mode);
+extern int outrnxqnavh(FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav){
+	FILE *fp = Ffp.file;
     auto tmp = outrnxqnavh(fp, opt, nav);
-	fclose(fp);
     return tmp;
 }
-extern int outrnxcnavh(const char *Ffp, const char *mode, const rnxopt_t *opt, const nav_t *nav){
-	FILE *fp = fopen(Ffp,mode);
+extern int outrnxcnavh(FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav){
+	FILE *fp = Ffp.file;
     auto tmp = outrnxcnavh(fp, opt, nav);
-	fclose(fp);
     return tmp;
 }
-extern int outrnxinavh(const char *Ffp, const char *mode, const rnxopt_t *opt, const nav_t *nav){
-	FILE *fp = fopen(Ffp,mode);
+extern int outrnxinavh(FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav){
+	FILE *fp = Ffp.file;
     auto tmp = outrnxinavh(fp, opt, nav);
-	fclose(fp);
     return tmp;
 }
-extern int outrnxnavb (const char *Ffp, const char *mode, const rnxopt_t *opt, const eph_t *eph){
-	FILE *fp = fopen(Ffp,mode);
+extern int outrnxnavb (FileWrapper &Ffp, const rnxopt_t *opt, const eph_t *eph){
+	FILE *fp = Ffp.file;
     auto tmp = outrnxnavb(fp, opt, eph);
-	fclose(fp);
     return tmp;
 }
-extern int outrnxgnavb(const char *Ffp, const char *mode, const rnxopt_t *opt, const geph_t *geph){
-	FILE *fp = fopen(Ffp,mode);
+extern int outrnxgnavb(FileWrapper &Ffp, const rnxopt_t *opt, const geph_t *geph){
+	FILE *fp = Ffp.file;
     auto tmp = outrnxgnavb(fp, opt, geph);
-	fclose(fp);
     return tmp;
 }
-extern int outrnxhnavb(const char *Ffp, const char *mode, const rnxopt_t *opt, const seph_t *seph){
-	FILE *fp = fopen(Ffp,mode);
+extern int outrnxhnavb(FileWrapper &Ffp, const rnxopt_t *opt, const seph_t *seph){
+	FILE *fp = Ffp.file;
     auto tmp = outrnxhnavb(fp, opt, seph);
-	fclose(fp);
     return tmp;
 }
 extern int rtk_uncompress(const char *file,Arr1D<char> Suncfile){
@@ -445,16 +458,14 @@ extern int convrnx(int format, rnxopt_t *opt, const char *file,std::vector<std::
     free(ofile);
     return tmp;
 }
-extern int  open_rnxctr (rnxctr_t *rnx, const char *Ffp, const char *mode){
-	FILE *fp = fopen(Ffp,mode);
+extern int  open_rnxctr (rnxctr_t *rnx, FileWrapper &Ffp){
+	FILE *fp = Ffp.file;
     auto tmp = open_rnxctr(rnx, fp);
-	fclose(fp);
     return tmp;
 }
-extern int  input_rnxctr(rnxctr_t *rnx, const char *Ffp, const char *mode){
-	FILE *fp = fopen(Ffp,mode);
+extern int  input_rnxctr(rnxctr_t *rnx, FileWrapper &Ffp){
+	FILE *fp = Ffp.file;
     auto tmp = input_rnxctr(rnx, fp);
-	fclose(fp);
     return tmp;
 }
 extern void eph2pos (gtime_t time, const eph_t  *eph,Arr1D<double> Srs,Arr1D<double> Sdts,Arr1D<double> Svar){
@@ -558,11 +569,11 @@ extern int decode_word (uint32_t word,Arr1D<uint8_t> Sdata){
     auto tmp = decode_word(word, data);
     return tmp;
 }
-extern int decode_frame(Arr1D<uint8_t> Sbuff, eph_t *eph, alm_t *alm,Arr1D<double> Sion,Arr1D<double> Sutc){
+extern int decode_frame(Arr1D<uint8_t> Sbuff, int sys, eph_t *eph, alm_t *alm,Arr1D<double> Sion,Arr1D<double> Sutc){
     const uint8_t *buff = Sbuff.src;
     double *ion = Sion.src;
     double *utc = Sutc.src;
-    auto tmp = decode_frame(buff, eph, alm, ion, utc);
+    auto tmp = decode_frame(buff, sys, eph, alm, ion, utc);
     return tmp;
 }
 extern int test_glostr(Arr1D<uint8_t> Sbuff){
@@ -610,84 +621,76 @@ extern int decode_irn_nav(Arr1D<uint8_t> Sbuff, eph_t *eph,Arr1D<double> Sion,Ar
     auto tmp = decode_irn_nav(buff, eph, ion, utc);
     return tmp;
 }
-extern int input_rawf (raw_t *raw, int format, const char *Ffp, const char *mode){
-	FILE *fp = fopen(Ffp,mode);
+extern int input_rawf (raw_t *raw, int format, FileWrapper &Ffp){
+	FILE *fp = Ffp.file;
     auto tmp = input_rawf(raw, format, fp);
-	fclose(fp);
     return tmp;
 }
-extern int input_oem4f (raw_t *raw, const char *Ffp, const char *mode){
-	FILE *fp = fopen(Ffp,mode);
+extern int input_oem4f (raw_t *raw, FileWrapper &Ffp){
+	FILE *fp = Ffp.file;
     auto tmp = input_oem4f(raw, fp);
-	fclose(fp);
     return tmp;
 }
-// extern int input_cnavf (raw_t *raw, const char *Ffp, const char *mode){
-// 	FILE *fp = fopen(Ffp,mode);
+// extern int input_cnavf (raw_t *raw, FileWrapper &Ffp){
+// 	FILE *fp = Ffp.file;
 //     auto tmp = input_cnavf(raw, fp);
-// 	fclose(fp);
 //     return tmp;
 // }
-extern int input_ubxf  (raw_t *raw, const char *Ffp, const char *mode){
-	FILE *fp = fopen(Ffp,mode);
+extern int input_ubxf  (raw_t *raw, FileWrapper &Ffp){
+	FILE *fp = Ffp.file;
     auto tmp = input_ubxf(raw, fp);
-	fclose(fp);
     return tmp;
 }
-extern int input_sbpf  (raw_t *raw, const char *Ffp, const char *mode){
-	FILE *fp = fopen(Ffp,mode);
+extern int input_sbpf  (raw_t *raw, FileWrapper &Ffp){
+	FILE *fp = Ffp.file;
     auto tmp = input_sbpf(raw, fp);
-	fclose(fp);
     return tmp;
 }
-extern int input_cresf (raw_t *raw, const char *Ffp, const char *mode){
-	FILE *fp = fopen(Ffp,mode);
+extern int input_cresf (raw_t *raw, FileWrapper &Ffp){
+	FILE *fp = Ffp.file;
     auto tmp = input_cresf(raw, fp);
-	fclose(fp);
     return tmp;
 }
-extern int input_stqf  (raw_t *raw, const char *Ffp, const char *mode){
-	FILE *fp = fopen(Ffp,mode);
+extern int input_stqf  (raw_t *raw, FileWrapper &Ffp){
+	FILE *fp = Ffp.file;
     auto tmp = input_stqf(raw, fp);
-	fclose(fp);
     return tmp;
 }
-extern int input_javadf(raw_t *raw, const char *Ffp, const char *mode){
-	FILE *fp = fopen(Ffp,mode);
+extern int input_javadf(raw_t *raw, FileWrapper &Ffp){
+	FILE *fp = Ffp.file;
     auto tmp = input_javadf(raw, fp);
-	fclose(fp);
     return tmp;
 }
-extern int input_nvsf  (raw_t *raw, const char *Ffp, const char *mode){
-	FILE *fp = fopen(Ffp,mode);
+extern int input_nvsf  (raw_t *raw, FileWrapper &Ffp){
+	FILE *fp = Ffp.file;
     auto tmp = input_nvsf(raw, fp);
-	fclose(fp);
     return tmp;
 }
-extern int input_bnxf  (raw_t *raw, const char *Ffp, const char *mode){
-	FILE *fp = fopen(Ffp,mode);
+extern int input_bnxf  (raw_t *raw, FileWrapper &Ffp){
+	FILE *fp = Ffp.file;
     auto tmp = input_bnxf(raw, fp);
-	fclose(fp);
     return tmp;
 }
-extern int input_rt17f (raw_t *raw, const char *Ffp, const char *mode){
-	FILE *fp = fopen(Ffp,mode);
+extern int input_rt17f (raw_t *raw, FileWrapper &Ffp){
+	FILE *fp = Ffp.file;
     auto tmp = input_rt17f(raw, fp);
-	fclose(fp);
     return tmp;
 }
-extern int input_sbff  (raw_t *raw, const char *Ffp, const char *mode){
-	FILE *fp = fopen(Ffp,mode);
+extern int input_sbff  (raw_t *raw, FileWrapper &Ffp){
+	FILE *fp = Ffp.file;
     auto tmp = input_sbff(raw, fp);
-	fclose(fp);
     return tmp;
 }
-// extern int input_tersusf(raw_t *raw, const char *Ffp, const char *mode){
-// 	FILE *fp = fopen(Ffp,mode);
+// extern int input_tersusf(raw_t *raw, FileWrapper &Ffp){
+// 	FILE *fp = Ffp.file;
 //     auto tmp = input_tersusf(raw, fp);
-// 	fclose(fp);
 //     return tmp;
 // }
+extern int input_unicoref(raw_t *raw, FileWrapper &Ffp){
+	FILE *fp = Ffp.file;
+    auto tmp = input_unicoref(raw, fp);
+    return tmp;
+}
 extern int gen_ubx (const char *msg,Arr1D<uint8_t> Sbuff){
     uint8_t *buff = Sbuff.src;
     auto tmp = gen_ubx(msg, buff);
@@ -703,38 +706,36 @@ extern int gen_nvs (const char *msg,Arr1D<uint8_t> Sbuff){
     auto tmp = gen_nvs(msg, buff);
     return tmp;
 }
-extern int input_rtcm2f(rtcm_t *rtcm, const char *Ffp, const char *mode){
-	FILE *fp = fopen(Ffp,mode);
+extern int input_rtcm2f(rtcm_t *rtcm, FileWrapper &Ffp){
+	FILE *fp = Ffp.file;
     auto tmp = input_rtcm2f(rtcm, fp);
-	fclose(fp);
     return tmp;
 }
-extern int input_rtcm3f(rtcm_t *rtcm, const char *Ffp, const char *mode){
-	FILE *fp = fopen(Ffp,mode);
+extern int input_rtcm3f(rtcm_t *rtcm, FileWrapper &Ffp){
+	FILE *fp = Ffp.file;
     auto tmp = input_rtcm3f(rtcm, fp);
-	fclose(fp);
     return tmp;
 }
 extern int readsol (std::vector<std::string> Dfiles, int nfile, solbuf_t *sol){
-    char **files = convertChar(Dfiles);
+    const char **files = convertToConstCharPtrArray(Dfiles);
     auto tmp = readsol(files, nfile, sol);
     free(files);
     return tmp;
 }
 extern int readsolt(std::vector<std::string> Dfiles, int nfile, gtime_t ts, gtime_t te, double tint, int qflag, solbuf_t *sol){
-    char **files = convertChar(Dfiles);
+    const char **files = convertToConstCharPtrArray(Dfiles);
     auto tmp = readsolt(files, nfile, ts, te, tint, qflag, sol);
     free(files);
     return tmp;
 }
 extern int readsolstat(std::vector<std::string> Dfiles, int nfile, solstatbuf_t *statbuf){
-    char **files = convertChar(Dfiles);
+    const char **files = convertToConstCharPtrArray(Dfiles);
     auto tmp = readsolstat(files, nfile, statbuf);
     free(files);
     return tmp;
 }
 extern int readsolstatt(std::vector<std::string> Dfiles, int nfile, gtime_t ts, gtime_t te, double tint, solstatbuf_t *statbuf){
-    char **files = convertChar(Dfiles);
+    const char **files = convertToConstCharPtrArray(Dfiles);
     auto tmp = readsolstatt(files, nfile, ts, te, tint, statbuf);
     free(files);
     return tmp;
@@ -760,29 +761,25 @@ extern int outsolexs(Arr1D<uint8_t> Sbuff, const sol_t *sol, const ssat_t *ssat,
     auto tmp = outsolexs(buff, sol, ssat, opt);
     return tmp;
 }
-extern void outprcopt(const char *Ffp, const char *mode, const prcopt_t *opt){
-	FILE *fp = fopen(Ffp,mode);
+extern void outprcopt(FileWrapper &Ffp, const prcopt_t *opt){
+	FILE *fp = Ffp.file;
     outprcopt(fp, opt);
-	fclose(fp);
 
 }
-extern void outsolhead(const char *Ffp, const char *mode, const solopt_t *opt){
-	FILE *fp = fopen(Ffp,mode);
+extern void outsolhead(FileWrapper &Ffp, const solopt_t *opt){
+	FILE *fp = Ffp.file;
     outsolhead(fp, opt);
-	fclose(fp);
 
 }
-extern void outsol  (const char *Ffp, const char *mode, const sol_t *sol,Arr1D<double> Srb, const solopt_t *opt){
+extern void outsol  (FileWrapper &Ffp, const sol_t *sol,Arr1D<double> Srb, const solopt_t *opt){
     const double *rb = Srb.src;
-	FILE *fp = fopen(Ffp,mode);
+	FILE *fp = Ffp.file;
     outsol(fp, sol, rb, opt);
-	fclose(fp);
 
 }
-extern void outsolex(const char *Ffp, const char *mode, const sol_t *sol, const ssat_t *ssat, const solopt_t *opt){
-	FILE *fp = fopen(Ffp,mode);
+extern void outsolex(FileWrapper &Ffp, const sol_t *sol, const ssat_t *ssat, const solopt_t *opt){
+	FILE *fp = Ffp.file;
     outsolex(fp, sol, ssat, opt);
-	fclose(fp);
 
 }
 extern int outnmea_rmc(Arr1D<uint8_t> Sbuff, const sol_t *sol){
@@ -815,10 +812,9 @@ extern int convgpx(const char *infile, const char *outfile, gtime_t ts, gtime_t 
     auto tmp = convgpx(infile, outfile, ts, te, tint, qflg, offset, outtrk, outpnt, outalt, outtime);
     return tmp;
 }
-extern void sbsoutmsg(const char *Ffp, const char *mode, sbsmsg_t *sbsmsg){
-	FILE *fp = fopen(Ffp,mode);
+extern void sbsoutmsg(FileWrapper &Ffp, sbsmsg_t *sbsmsg){
+	FILE *fp = Ffp.file;
     sbsoutmsg(fp, sbsmsg);
-	fclose(fp);
 
 }
 extern int  sbsdecodemsg(gtime_t time, int prn,Arr1D<uint32_t> Swords, sbsmsg_t *sbsmsg){
@@ -919,9 +915,9 @@ extern int pntpos(const obsd_t *obs, int n, const nav_t *nav, const prcopt_t *op
     auto tmp = pntpos(obs, n, nav, opt, sol, azel, ssat, msg);
     return tmp;
 }
-extern int  rtkoutstat(rtk_t *rtk,Arr1D<char> Sbuff){
+extern int  rtkoutstat(rtk_t *rtk, int level,Arr1D<char> Sbuff){
     char *buff = Sbuff.src;
-    auto tmp = rtkoutstat(rtk, buff);
+    auto tmp = rtkoutstat(rtk, level, buff);
     return tmp;
 }
 extern int pppoutstat(rtk_t *rtk,Arr1D<char> Sbuff){
@@ -937,19 +933,23 @@ extern int ppp_ar(rtk_t *rtk, const obsd_t *obs, int n,Arr1D<int> Sexc, const na
     auto tmp = ppp_ar(rtk, obs, n, exc, nav, azel, x, P);
     return tmp;
 }
-extern int postpos(gtime_t ts, gtime_t te, double ti, double tu, const prcopt_t *popt, const solopt_t *sopt, const filopt_t *fopt,std::vector<std::string> Dinfile, int n,Arr1D<char> Soutfile, const char *rov, const char *base){
-    char **infile = convertChar(Dinfile);
-    char *outfile = Soutfile.src;
+extern int postpos(gtime_t ts, gtime_t te, double ti, double tu, const prcopt_t *popt, const solopt_t *sopt, const filopt_t *fopt,std::vector<std::string> Dinfile, int n, const char *outfile, const char *rov, const char *base){
+    const char **infile = convertToConstCharPtrArray(Dinfile);
     auto tmp = postpos(ts, te, ti, tu, popt, sopt, fopt, infile, n, outfile, rov, base);
     free(infile);
     return tmp;
 }
+extern int getstapos(const char *file, const char *name,Arr1D<double> Sr){
+    double *r = Sr.src;
+    auto tmp = getstapos(file, name, r);
+    return tmp;
+}
 extern int  strsvrstart(strsvr_t *svr,Arr1D<int> Sopts,Arr1D<int> Sstrs,std::vector<std::string> Dpaths,std::vector<std::string> Dlogs,std::vector<std::vector<strconv_t>> Dconv,std::vector<std::string> Dcmds,std::vector<std::string> Dcmds_priodic,Arr1D<double> Snmeapos){
-    char **paths = convertChar(Dpaths);
-    char **logs = convertChar(Dlogs);
+    const char **paths = convertToConstCharPtrArray(Dpaths);
+    const char **logs = convertToConstCharPtrArray(Dlogs);
     strconv_t **conv = convertType(Dconv);
-    char **cmds = convertChar(Dcmds);
-    char **cmds_priodic = convertChar(Dcmds_priodic);
+    const char **cmds = convertToConstCharPtrArray(Dcmds);
+    const char **cmds_priodic = convertToConstCharPtrArray(Dcmds_priodic);
     int *opts = Sopts.src;
     int *strs = Sstrs.src;
     const double *nmeapos = Snmeapos.src;
@@ -962,9 +962,9 @@ extern int  strsvrstart(strsvr_t *svr,Arr1D<int> Sopts,Arr1D<int> Sstrs,std::vec
     return tmp;
 }
 extern void strsvrstop (strsvr_t *svr,std::vector<std::string> Dcmds){
-    char **cmds = convertChar(Dcmds);
+    const char **cmds = convertToConstCharPtrArray(Dcmds);
     strsvrstop(svr, cmds);
-    free(cmds);
+    freeConstCharPtrArray(cmds);
 
 }
 extern void strsvrstat (strsvr_t *svr,Arr1D<int> Sstat,Arr1D<int> Slog_stat,Arr1D<int> Sbyte,Arr1D<int> Sbps,Arr1D<char> Smsg){
@@ -977,10 +977,10 @@ extern void strsvrstat (strsvr_t *svr,Arr1D<int> Sstat,Arr1D<int> Slog_stat,Arr1
 
 }
 extern int  rtksvrstart (rtksvr_t *svr, int cycle, int buffsize,Arr1D<int> Sstrs,std::vector<std::string> Dpaths,Arr1D<int> Sformats, int navsel,std::vector<std::string> Dcmds,std::vector<std::string> Dcmds_periodic,std::vector<std::string> Drcvopts, int nmeacycle, int nmeareq,Arr1D<double> Snmeapos, prcopt_t *prcopt, solopt_t *solopt, stream_t *moni,Arr1D<char> Serrmsg){
-    char **paths = convertChar(Dpaths);
-    char **cmds = convertChar(Dcmds);
-    char **cmds_periodic = convertChar(Dcmds_periodic);
-    char **rcvopts = convertChar(Drcvopts);
+    const char **paths = convertToConstCharPtrArray(Dpaths);
+    const char **cmds = convertToConstCharPtrArray(Dcmds);
+    const char **cmds_periodic = convertToConstCharPtrArray(Dcmds_periodic);
+    const char **rcvopts = convertToConstCharPtrArray(Drcvopts);
     int *strs = Sstrs.src;
     int *formats = Sformats.src;
     const double *nmeapos = Snmeapos.src;
@@ -993,9 +993,9 @@ extern int  rtksvrstart (rtksvr_t *svr, int cycle, int buffsize,Arr1D<int> Sstrs
     return tmp;
 }
 extern void rtksvrstop  (rtksvr_t *svr,std::vector<std::string> Dcmds){
-    char **cmds = convertChar(Dcmds);
+    const char **cmds = convertToConstCharPtrArray(Dcmds);
     rtksvrstop(svr, cmds);
-    free(cmds);
+    freeConstCharPtrArray(cmds);
 
 }
 extern int  rtksvrostat (rtksvr_t *svr, int type, gtime_t *time,Arr1D<int> Ssat,Arr1D<double> Saz,Arr1D<double> Sel,std::vector<std::vector<int>> Dsnr,Arr1D<int> Svsat){
@@ -1015,7 +1015,7 @@ extern void rtksvrsstat (rtksvr_t *svr,Arr1D<int> Ssstat,Arr1D<char> Smsg){
 
 }
 extern int dl_readurls(const char *file,std::vector<std::string> Dtypes, int ntype, url_t *urls, int nmax){
-    char **types = convertChar(Dtypes);
+    const char **types = convertToConstCharPtrArray(Dtypes);
     auto tmp = dl_readurls(file, types, ntype, urls, nmax);
     free(types);
     return tmp;
@@ -1026,203 +1026,8 @@ extern int dl_readstas(const char *file,std::vector<std::string> Dstas, int nmax
     free(stas);
     return tmp;
 }
-extern int dl_exec(gtime_t ts, gtime_t te, double ti, int seqnos, int seqnoe, const url_t *urls, int nurl,std::vector<std::string> Dstas, int nsta, const char *dir, const char *usr, const char *pwd, const char *proxy, int opts,Arr1D<char> Smsg, const char *Ffp, const char *mode){
-    char **stas = convertChar(Dstas);
-    char *msg = Smsg.src;
-	FILE *fp = fopen(Ffp,mode);
-    auto tmp = dl_exec(ts, te, ti, seqnos, seqnoe, urls, nurl, stas, nsta, dir, usr, pwd, proxy, opts, msg, fp);
-    free(stas);
-	fclose(fp);
-    return tmp;
-}
-extern void dl_test(gtime_t ts, gtime_t te, double ti, const url_t *urls, int nurl,std::vector<std::string> Dstas, int nsta, const char *dir, int ncol, int datefmt, const char *Ffp, const char *mode){
-    char **stas = convertChar(Dstas);
-	FILE *fp = fopen(Ffp,mode);
-    dl_test(ts, te, ti, urls, nurl, stas, nsta, dir, ncol, datefmt, fp);
-    free(stas);
-	fclose(fp);
-
-}
-
-extern void matfprint(Arr1D<double> SA, int n, int m, int p, int q, FileWrapper &Ffp){
-    const double *A = SA.src;
-	FILE *fp = Ffp.file;
-    matfprint(A, n, m, p, q, fp);
-
-}
-extern int outrnxobsh(FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav){
-	FILE *fp = Ffp.file;
-    auto tmp = outrnxobsh(fp, opt, nav);
-    return tmp;
-}
-extern int outrnxobsb(FileWrapper &Ffp, const rnxopt_t *opt, const obsd_t *obs, int n, int epflag){
-	FILE *fp = Ffp.file;
-    auto tmp = outrnxobsb(fp, opt, obs, n, epflag);
-    return tmp;
-}
-extern int outrnxnavh (FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav){
-	FILE *fp = Ffp.file;
-    auto tmp = outrnxnavh(fp, opt, nav);
-    return tmp;
-}
-extern int outrnxgnavh(FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav){
-	FILE *fp = Ffp.file;
-    auto tmp = outrnxgnavh(fp, opt, nav);
-    return tmp;
-}
-extern int outrnxhnavh(FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav){
-	FILE *fp = Ffp.file;
-    auto tmp = outrnxhnavh(fp, opt, nav);
-    return tmp;
-}
-extern int outrnxlnavh(FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav){
-	FILE *fp = Ffp.file;
-    auto tmp = outrnxlnavh(fp, opt, nav);
-    return tmp;
-}
-extern int outrnxqnavh(FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav){
-	FILE *fp = Ffp.file;
-    auto tmp = outrnxqnavh(fp, opt, nav);
-    return tmp;
-}
-extern int outrnxcnavh(FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav){
-	FILE *fp = Ffp.file;
-    auto tmp = outrnxcnavh(fp, opt, nav);
-    return tmp;
-}
-extern int outrnxinavh(FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav){
-	FILE *fp = Ffp.file;
-    auto tmp = outrnxinavh(fp, opt, nav);
-    return tmp;
-}
-extern int outrnxnavb (FileWrapper &Ffp, const rnxopt_t *opt, const eph_t *eph){
-	FILE *fp = Ffp.file;
-    auto tmp = outrnxnavb(fp, opt, eph);
-    return tmp;
-}
-extern int outrnxgnavb(FileWrapper &Ffp, const rnxopt_t *opt, const geph_t *geph){
-	FILE *fp = Ffp.file;
-    auto tmp = outrnxgnavb(fp, opt, geph);
-    return tmp;
-}
-extern int outrnxhnavb(FileWrapper &Ffp, const rnxopt_t *opt, const seph_t *seph){
-	FILE *fp = Ffp.file;
-    auto tmp = outrnxhnavb(fp, opt, seph);
-    return tmp;
-}
-extern int  open_rnxctr (rnxctr_t *rnx, FileWrapper &Ffp){
-	FILE *fp = Ffp.file;
-    auto tmp = open_rnxctr(rnx, fp);
-    return tmp;
-}
-extern int  input_rnxctr(rnxctr_t *rnx, FileWrapper &Ffp){
-	FILE *fp = Ffp.file;
-    auto tmp = input_rnxctr(rnx, fp);
-    return tmp;
-}
-extern int input_rawf (raw_t *raw, int format, FileWrapper &Ffp){
-	FILE *fp = Ffp.file;
-    auto tmp = input_rawf(raw, format, fp);
-    return tmp;
-}
-extern int input_oem4f (raw_t *raw, FileWrapper &Ffp){
-	FILE *fp = Ffp.file;
-    auto tmp = input_oem4f(raw, fp);
-    return tmp;
-}
-// extern int input_cnavf (raw_t *raw, FileWrapper &Ffp){
-// 	FILE *fp = Ffp.file;
-//     auto tmp = input_cnavf(raw, fp);
-//     return tmp;
-// }
-extern int input_ubxf  (raw_t *raw, FileWrapper &Ffp){
-	FILE *fp = Ffp.file;
-    auto tmp = input_ubxf(raw, fp);
-    return tmp;
-}
-extern int input_sbpf  (raw_t *raw, FileWrapper &Ffp){
-	FILE *fp = Ffp.file;
-    auto tmp = input_sbpf(raw, fp);
-    return tmp;
-}
-extern int input_cresf (raw_t *raw, FileWrapper &Ffp){
-	FILE *fp = Ffp.file;
-    auto tmp = input_cresf(raw, fp);
-    return tmp;
-}
-extern int input_stqf  (raw_t *raw, FileWrapper &Ffp){
-	FILE *fp = Ffp.file;
-    auto tmp = input_stqf(raw, fp);
-    return tmp;
-}
-extern int input_javadf(raw_t *raw, FileWrapper &Ffp){
-	FILE *fp = Ffp.file;
-    auto tmp = input_javadf(raw, fp);
-    return tmp;
-}
-extern int input_nvsf  (raw_t *raw, FileWrapper &Ffp){
-	FILE *fp = Ffp.file;
-    auto tmp = input_nvsf(raw, fp);
-    return tmp;
-}
-extern int input_bnxf  (raw_t *raw, FileWrapper &Ffp){
-	FILE *fp = Ffp.file;
-    auto tmp = input_bnxf(raw, fp);
-    return tmp;
-}
-extern int input_rt17f (raw_t *raw, FileWrapper &Ffp){
-	FILE *fp = Ffp.file;
-    auto tmp = input_rt17f(raw, fp);
-    return tmp;
-}
-extern int input_sbff  (raw_t *raw, FileWrapper &Ffp){
-	FILE *fp = Ffp.file;
-    auto tmp = input_sbff(raw, fp);
-    return tmp;
-}
-// extern int input_tersusf(raw_t *raw, FileWrapper &Ffp){
-// 	FILE *fp = Ffp.file;
-//     auto tmp = input_tersusf(raw, fp);
-//     return tmp;
-// }
-extern int input_rtcm2f(rtcm_t *rtcm, FileWrapper &Ffp){
-	FILE *fp = Ffp.file;
-    auto tmp = input_rtcm2f(rtcm, fp);
-    return tmp;
-}
-extern int input_rtcm3f(rtcm_t *rtcm, FileWrapper &Ffp){
-	FILE *fp = Ffp.file;
-    auto tmp = input_rtcm3f(rtcm, fp);
-    return tmp;
-}
-extern void outprcopt(FileWrapper &Ffp, const prcopt_t *opt){
-	FILE *fp = Ffp.file;
-    outprcopt(fp, opt);
-
-}
-extern void outsolhead(FileWrapper &Ffp, const solopt_t *opt){
-	FILE *fp = Ffp.file;
-    outsolhead(fp, opt);
-
-}
-extern void outsol  (FileWrapper &Ffp, const sol_t *sol,Arr1D<double> Srb, const solopt_t *opt){
-    const double *rb = Srb.src;
-	FILE *fp = Ffp.file;
-    outsol(fp, sol, rb, opt);
-
-}
-extern void outsolex(FileWrapper &Ffp, const sol_t *sol, const ssat_t *ssat, const solopt_t *opt){
-	FILE *fp = Ffp.file;
-    outsolex(fp, sol, ssat, opt);
-
-}
-extern void sbsoutmsg(FileWrapper &Ffp, sbsmsg_t *sbsmsg){
-	FILE *fp = Ffp.file;
-    sbsoutmsg(fp, sbsmsg);
-
-}
 extern int dl_exec(gtime_t ts, gtime_t te, double ti, int seqnos, int seqnoe, const url_t *urls, int nurl,std::vector<std::string> Dstas, int nsta, const char *dir, const char *usr, const char *pwd, const char *proxy, int opts,Arr1D<char> Smsg, FileWrapper &Ffp){
-    char **stas = convertChar(Dstas);
+    const char **stas = convertToConstCharPtrArray(Dstas);
     char *msg = Smsg.src;
 	FILE *fp = Ffp.file;
     auto tmp = dl_exec(ts, te, ti, seqnos, seqnoe, urls, nurl, stas, nsta, dir, usr, pwd, proxy, opts, msg, fp);
@@ -1230,23 +1035,19 @@ extern int dl_exec(gtime_t ts, gtime_t te, double ti, int seqnos, int seqnoe, co
     return tmp;
 }
 extern void dl_test(gtime_t ts, gtime_t te, double ti, const url_t *urls, int nurl,std::vector<std::string> Dstas, int nsta, const char *dir, int ncol, int datefmt, FileWrapper &Ffp){
-    char **stas = convertChar(Dstas);
+    const char **stas = convertToConstCharPtrArray(Dstas);
 	FILE *fp = Ffp.file;
     dl_test(ts, te, ti, urls, nurl, stas, nsta, dir, ncol, datefmt, fp);
-    free(stas);
+    freeConstCharPtrArray(stas);
 
 }
-
-
-
 PYBIND11_MODULE(pyrtklib5, m) {
     py::class_<FileWrapper>(m, "FileWrapper")
-        .def(py::init<const char*, const char*>())
-        .def("get", &FileWrapper::get, py::return_value_policy::reference)
-        .def("cleareof", &FileWrapper::cleareof);
+    .def(py::init<const char*, const char*>())
+    .def("get", &FileWrapper::get, py::return_value_policy::reference)
+    .def("cleareof", &FileWrapper::cleareof);
 
     m.doc() = "rtklib python interface by pybind11";
-	m.attr("NULL") = 0;
     m.attr("PI")=3.1415926535897932;
     m.attr("D2R")=(PI/180.0);
     m.attr("R2D")=(180.0/PI);
@@ -1293,6 +1094,14 @@ PYBIND11_MODULE(pyrtklib5, m) {
     m.attr("SYS_IRN")=0x40;
     m.attr("SYS_LEO")=0x80;
     m.attr("SYS_ALL")=0xFF;
+    m.attr("RNX_SYS_GPS")=0;
+    m.attr("RNX_SYS_GLO")=1;
+    m.attr("RNX_SYS_GAL")=2;
+    m.attr("RNX_SYS_QZS")=3;
+    m.attr("RNX_SYS_SBS")=4;
+    m.attr("RNX_SYS_CMP")=5;
+    m.attr("RNX_SYS_IRN")=6;
+    m.attr("RNX_NUMSYS")=7;
     m.attr("TSYS_GPS")=0;
     m.attr("TSYS_UTC")=1;
     m.attr("TSYS_GLO")=2;
@@ -1303,7 +1112,6 @@ PYBIND11_MODULE(pyrtklib5, m) {
     m.attr("NFREQ")=3;
     m.attr("NFREQGLO")=2;
     m.attr("NEXOBS")=0;
-    m.attr("SNR_UNIT")=0.001;
     m.attr("MINPRNGPS")=1;
     m.attr("MAXPRNGPS")=32;
     m.attr("NSATGPS")=(MAXPRNGPS-MINPRNGPS+1);
@@ -1367,7 +1175,8 @@ PYBIND11_MODULE(pyrtklib5, m) {
     m.attr("MAXSTRMSG")=1024;
     m.attr("MAXSTRRTK")=8;
     m.attr("MAXSBSMSG")=32;
-    m.attr("MAXSOLMSG")=8191;
+    m.attr("MAXSOLLEN")=512;
+    m.attr("MAXSOLMSG")=32768;
     m.attr("MAXRAWLEN")=16384;
     m.attr("MAXERRMSG")=4096;
     m.attr("MAXANT")=64;
@@ -1385,13 +1194,14 @@ PYBIND11_MODULE(pyrtklib5, m) {
     m.attr("OBSTYPE_CP")=0x02;
     m.attr("OBSTYPE_DOP")=0x04;
     m.attr("OBSTYPE_SNR")=0x08;
-    m.attr("OBSTYPE_ALL")=0xFF;
+    m.attr("OBSTYPE_ALL")=0x0F;
     m.attr("FREQTYPE_L1")=0x01;
     m.attr("FREQTYPE_L2")=0x02;
     m.attr("FREQTYPE_L3")=0x04;
     m.attr("FREQTYPE_L4")=0x08;
     m.attr("FREQTYPE_L5")=0x10;
-    m.attr("FREQTYPE_ALL")=0xFF;
+    m.attr("FREQTYPE_L6")=0x20;
+    m.attr("FREQTYPE_ALL")=0x3F;
     m.attr("CODE_NONE")=0;
     m.attr("CODE_L1C")=1;
     m.attr("CODE_L1P")=2;
@@ -1461,7 +1271,9 @@ PYBIND11_MODULE(pyrtklib5, m) {
     m.attr("CODE_L4A")=66;
     m.attr("CODE_L4B")=67;
     m.attr("CODE_L4X")=68;
-    m.attr("MAXCODE")=68;
+    m.attr("CODE_L6D")=69;
+    m.attr("CODE_L6P")=70;
+    m.attr("MAXCODE")=70;
     m.attr("PMODE_SINGLE")=0;
     m.attr("PMODE_DGPS")=1;
     m.attr("PMODE_KINEMA")=2;
@@ -1503,7 +1315,6 @@ PYBIND11_MODULE(pyrtklib5, m) {
     m.attr("IONOOPT_EST")=4;
     m.attr("IONOOPT_TEC")=5;
     m.attr("IONOOPT_QZS")=6;
-    m.attr("IONOOPT_STEC")=8;
     m.attr("TROPOPT_OFF")=0;
     m.attr("TROPOPT_SAAS")=1;
     m.attr("TROPOPT_SBAS")=2;
@@ -1526,11 +1337,12 @@ PYBIND11_MODULE(pyrtklib5, m) {
     m.attr("SBSOPT_FCORR")=2;
     m.attr("SBSOPT_ICORR")=4;
     m.attr("SBSOPT_RANGE")=8;
-    m.attr("POSOPT_POS")=0;
-    m.attr("POSOPT_SINGLE")=1;
-    m.attr("POSOPT_FILE")=2;
-    m.attr("POSOPT_RINEX")=3;
-    m.attr("POSOPT_RTCM")=4;
+    m.attr("POSOPT_POS_LLH")=0;
+    m.attr("POSOPT_POS_XYZ")=1;
+    m.attr("POSOPT_SINGLE")=2;
+    m.attr("POSOPT_FILE")=3;
+    m.attr("POSOPT_RINEX")=4;
+    m.attr("POSOPT_RTCM")=5;
     m.attr("STR_NONE")=0;
     m.attr("STR_SERIAL")=1;
     m.attr("STR_FILE")=2;
@@ -1547,7 +1359,6 @@ PYBIND11_MODULE(pyrtklib5, m) {
     m.attr("STRFMT_RTCM2")=0;
     m.attr("STRFMT_RTCM3")=1;
     m.attr("STRFMT_OEM4")=2;
-    m.attr("STRFMT_CNAV")=3;
     m.attr("STRFMT_UBX")=4;
     m.attr("STRFMT_SBP")=5;
     m.attr("STRFMT_CRES")=6;
@@ -1557,13 +1368,13 @@ PYBIND11_MODULE(pyrtklib5, m) {
     m.attr("STRFMT_BINEX")=10;
     m.attr("STRFMT_RT17")=11;
     m.attr("STRFMT_SEPT")=12;
-    m.attr("STRFMT_TERSUS")=13;
-    m.attr("STRFMT_RINEX")=14;
-    m.attr("STRFMT_SP3")=15;
-    m.attr("STRFMT_RNXCLK")=16;
-    m.attr("STRFMT_SBAS")=17;
-    m.attr("STRFMT_NMEA")=18;
-    m.attr("MAXRCVFMT")=13;
+    m.attr("STRFMT_UNICORE")=14;
+    m.attr("STRFMT_RINEX")=15;
+    m.attr("STRFMT_SP3")=16;
+    m.attr("STRFMT_RNXCLK")=17;
+    m.attr("STRFMT_SBAS")=18;
+    m.attr("STRFMT_NMEA")=19;
+    m.attr("MAXRCVFMT")=14;
     m.attr("STR_MODE_R")=0x1;
     m.attr("STR_MODE_W")=0x2;
     m.attr("STR_MODE_RW")=0x3;
@@ -1606,8 +1417,8 @@ PYBIND11_MODULE(pyrtklib5, m) {
     m.attr("P2_48")=3.552713678800501E-15;
     m.attr("P2_50")=8.881784197001252E-16;
     m.attr("P2_55")=2.775557561562891E-17;
-    m.attr("VER_RTKLIB")="demo5";
-    m.attr("PATCH_LEVEL")="b34h";
+    m.attr("VER_RTKLIB")="EX";
+    m.attr("PATCH_LEVEL")="2.5.0";
     bindArr1D<gtime_t>(m,"gtime_t");
     bindArr2D<gtime_t>(m,"gtime_t");
     bindArr1D<obsd_t>(m,"obsd_t");
@@ -1749,17 +1560,17 @@ PYBIND11_MODULE(pyrtklib5, m) {
         .def_readwrite("time",&obsd_t::time)
         .def_readwrite("sat",&obsd_t::sat)
         .def_readwrite("rcv",&obsd_t::rcv)
+        .def_readwrite("freq",&obsd_t::freq)
         .def_readwrite("timevalid",&obsd_t::timevalid)
         .def_readwrite("eventime",&obsd_t::eventime)
-        .def_readwrite("freq",&obsd_t::freq)
-        .def_property_readonly("SNR",[](obsd_t& o) {Arr1D<uint16_t>* tmp = new Arr1D<uint16_t>(o.SNR,NFREQ+NEXOBS);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("LLI",[](obsd_t& o) {Arr1D<uint8_t>* tmp = new Arr1D<uint8_t>(o.LLI,NFREQ+NEXOBS);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("code",[](obsd_t& o) {Arr1D<uint8_t>* tmp = new Arr1D<uint8_t>(o.code,NFREQ+NEXOBS);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("L",[](obsd_t& o) {Arr1D<double>* tmp = new Arr1D<double>(o.L,NFREQ+NEXOBS);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("P",[](obsd_t& o) {Arr1D<double>* tmp = new Arr1D<double>(o.P,NFREQ+NEXOBS);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("D",[](obsd_t& o) {Arr1D<float>* tmp = new Arr1D<float>(o.D,NFREQ+NEXOBS);return tmp;},py::return_value_policy::reference)
-        .def_property_readonly("Lstd",[](obsd_t& o) {Arr1D<uint8_t>* tmp = new Arr1D<uint8_t>(o.Lstd,NFREQ+NEXOBS);return tmp;},py::return_value_policy::reference)
-        .def_property_readonly("Pstd",[](obsd_t& o) {Arr1D<uint8_t>* tmp = new Arr1D<uint8_t>(o.Pstd,NFREQ+NEXOBS);return tmp;},py::return_value_policy::reference)
+        .def_property_readonly("SNR",[](obsd_t& o) {Arr1D<float>* tmp = new Arr1D<float>(o.SNR,NFREQ+NEXOBS);return tmp;},py::return_value_policy::reference)
+        .def_property_readonly("Lstd",[](obsd_t& o) {Arr1D<float>* tmp = new Arr1D<float>(o.Lstd,NFREQ+NEXOBS);return tmp;},py::return_value_policy::reference)
+        .def_property_readonly("Pstd",[](obsd_t& o) {Arr1D<float>* tmp = new Arr1D<float>(o.Pstd,NFREQ+NEXOBS);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("ptr",[](obsd_t& o){return &o;},py::return_value_policy::reference);
 
     py::class_<obs_t>(m,"obs_t").def(py::init())
@@ -1863,6 +1674,7 @@ PYBIND11_MODULE(pyrtklib5, m) {
         .def_readwrite("iode",&geph_t::iode)
         .def_readwrite("frq",&geph_t::frq)
         .def_readwrite("svh",&geph_t::svh)
+        .def_readwrite("flags",&geph_t::flags)
         .def_readwrite("sva",&geph_t::sva)
         .def_readwrite("age",&geph_t::age)
         .def_readwrite("toe",&geph_t::toe)
@@ -2091,7 +1903,10 @@ PYBIND11_MODULE(pyrtklib5, m) {
         .def_readwrite("hgt",&sta_t::hgt)
         .def_readwrite("glo_cp_align",&sta_t::glo_cp_align)
         .def_property_readonly("name",[](sta_t& o) {Arr1D<char>* tmp = new Arr1D<char>(o.name,MAXANT);return tmp;},py::return_value_policy::reference)
-        .def_property_readonly("marker",[](sta_t& o) {Arr1D<char>* tmp = new Arr1D<char>(o.marker,MAXANT);return tmp;},py::return_value_policy::reference)
+        .def_property_readonly("markerno",[](sta_t& o) {Arr1D<char>* tmp = new Arr1D<char>(o.markerno,MAXANT);return tmp;},py::return_value_policy::reference)
+        .def_property_readonly("markertype",[](sta_t& o) {Arr1D<char>* tmp = new Arr1D<char>(o.markertype,MAXANT);return tmp;},py::return_value_policy::reference)
+        .def_property_readonly("observer",[](sta_t& o) {Arr1D<char>* tmp = new Arr1D<char>(o.observer,MAXANT);return tmp;},py::return_value_policy::reference)
+        .def_property_readonly("agency",[](sta_t& o) {Arr1D<char>* tmp = new Arr1D<char>(o.agency,MAXANT);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("antdes",[](sta_t& o) {Arr1D<char>* tmp = new Arr1D<char>(o.antdes,MAXANT);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("antsno",[](sta_t& o) {Arr1D<char>* tmp = new Arr1D<char>(o.antsno,MAXANT);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("rectype",[](sta_t& o) {Arr1D<char>* tmp = new Arr1D<char>(o.rectype,MAXANT);return tmp;},py::return_value_policy::reference)
@@ -2113,6 +1928,7 @@ PYBIND11_MODULE(pyrtklib5, m) {
         .def_readwrite("prev_ratio1",&sol_t::prev_ratio1)
         .def_readwrite("prev_ratio2",&sol_t::prev_ratio2)
         .def_readwrite("thres",&sol_t::thres)
+        .def_readwrite("refstationid",&sol_t::refstationid)
         .def_property_readonly("rr",[](sol_t& o) {Arr1D<double>* tmp = new Arr1D<double>(o.rr,6);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("qr",[](sol_t& o) {Arr1D<float>* tmp = new Arr1D<float>(o.qr,6);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("qv",[](sol_t& o) {Arr1D<float>* tmp = new Arr1D<float>(o.qv,6);return tmp;},py::return_value_policy::reference)
@@ -2129,7 +1945,7 @@ PYBIND11_MODULE(pyrtklib5, m) {
         .def_readwrite("nb",&solbuf_t::nb)
         .def_property("data",[](solbuf_t& o) {Arr1D<sol_t>* tmp = new Arr1D<sol_t>(o.data,-1);return tmp;},[](solbuf_t& o,Arr1D<sol_t>arr){o.data=arr.src;},py::return_value_policy::reference)
         .def_property_readonly("rb",[](solbuf_t& o) {Arr1D<double>* tmp = new Arr1D<double>(o.rb,3);return tmp;},py::return_value_policy::reference)
-        .def_property_readonly("buff",[](solbuf_t& o) {Arr1D<uint8_t>* tmp = new Arr1D<uint8_t>(o.buff,MAXSOLMSG+1);return tmp;},py::return_value_policy::reference)
+        .def_property_readonly("buff",[](solbuf_t& o) {Arr1D<uint8_t>* tmp = new Arr1D<uint8_t>(o.buff,MAXSOLLEN+1);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("ptr",[](solbuf_t& o){return &o;},py::return_value_policy::reference);
 
     py::class_<solstat_t>(m,"solstat_t").def(py::init())
@@ -2168,6 +1984,7 @@ PYBIND11_MODULE(pyrtklib5, m) {
         .def_readwrite("ephsat",&rtcm_t::ephsat)
         .def_readwrite("ephset",&rtcm_t::ephset)
         .def_readwrite("nbyte",&rtcm_t::nbyte)
+        .def_readwrite("nbyte_invalid",&rtcm_t::nbyte_invalid)
         .def_readwrite("nbit",&rtcm_t::nbit)
         .def_readwrite("len",&rtcm_t::len)
         .def_readwrite("word",&rtcm_t::word)
@@ -2197,7 +2014,7 @@ PYBIND11_MODULE(pyrtklib5, m) {
         .def_readwrite("sta",&rnxctr_t::sta)
         .def_readwrite("ephsat",&rnxctr_t::ephsat)
         .def_readwrite("ephset",&rnxctr_t::ephset)
-        .def_property_readonly("tobs",[](rnxctr_t& o) {Arr2D<char>* tmp = new Arr2D<char>(o.tobs,8,MAXOBSTYPE);return tmp;},py::return_value_policy::reference)
+        .def_property_readonly("tobs",[](rnxctr_t& o) {Arr2D<char>* tmp = new Arr2D<char>(o.tobs,RNX_NUMSYS,MAXOBSTYPE);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("opt",[](rnxctr_t& o) {Arr1D<char>* tmp = new Arr1D<char>(o.opt,256);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("ptr",[](rnxctr_t& o){return &o;},py::return_value_policy::reference);
 
@@ -2210,14 +2027,13 @@ PYBIND11_MODULE(pyrtklib5, m) {
 
     py::class_<opt_t>(m,"opt_t").def(py::init())
         .def_readwrite("format",&opt_t::format)
-        .def_property("name",[](opt_t& o) {Arr1D<char>* tmp = new Arr1D<char>(const_cast<char*>(o.name),-1);return tmp;},[](opt_t& o,Arr1D<char>arr){o.name=arr.src;},py::return_value_policy::reference)
-        .def_property("var",[](opt_t& o) {Arr1D<void>* tmp = new Arr1D<void>(o.var,-1);return tmp;},[](opt_t& o,Arr1D<void>arr){o.var=arr.src;},py::return_value_policy::reference)
+        .def_property("name",[](opt_t& o) {Arr1D<char>* tmp = new Arr1D<char>(const_cast<char*>(o.name),-1);return tmp;},[](opt_t& o,Arr1D<char>arr){o.name=arr.src;},py::return_value_policy::reference)        .def_property("var",[](opt_t& o) {Arr1D<void>* tmp = new Arr1D<void>(o.var,-1);return tmp;},[](opt_t& o,Arr1D<void>arr){o.var=arr.src;},py::return_value_policy::reference)
         .def_property("comment",[](opt_t& o) {Arr1D<char>* tmp = new Arr1D<char>(const_cast<char*>(o.comment),-1);return tmp;},[](opt_t& o,Arr1D<char>arr){o.comment=arr.src;},py::return_value_policy::reference)
         .def_property_readonly("ptr",[](opt_t& o){return &o;},py::return_value_policy::reference);
 
     py::class_<snrmask_t>(m,"snrmask_t").def(py::init())
         .def_property_readonly("ena",[](snrmask_t& o) {Arr1D<int>* tmp = new Arr1D<int>(o.ena,2);return tmp;},py::return_value_policy::reference)
-        .def_property_readonly("mask",[](snrmask_t& o) {Arr2D<double>* tmp = new Arr2D<double>(o.mask,NFREQ,9);return tmp;},py::return_value_policy::reference)
+        .def_property_readonly("mask",[](snrmask_t& o) {Arr2D<double>* tmp = new Arr2D<double>(o.mask,MAXFREQ,9);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("ptr",[](snrmask_t& o){return &o;},py::return_value_policy::reference);
 
     py::class_<prcopt_t>(m,"prcopt_t").def(py::init())
@@ -2264,7 +2080,7 @@ PYBIND11_MODULE(pyrtklib5, m) {
         .def_readwrite("outsingle",&prcopt_t::outsingle)
         .def_readwrite("syncsol",&prcopt_t::syncsol)
         .def_readwrite("freqopt",&prcopt_t::freqopt)
-        .def_property_readonly("eratio",[](prcopt_t& o) {Arr1D<double>* tmp = new Arr1D<double>(o.eratio,NFREQ);return tmp;},py::return_value_policy::reference)
+        .def_property_readonly("eratio",[](prcopt_t& o) {Arr1D<double>* tmp = new Arr1D<double>(o.eratio,MAXFREQ);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("err",[](prcopt_t& o) {Arr1D<double>* tmp = new Arr1D<double>(o.err,8);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("std",[](prcopt_t& o) {Arr1D<double>* tmp = new Arr1D<double>(o.std,3);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("prn",[](prcopt_t& o) {Arr1D<double>* tmp = new Arr1D<double>(o.prn,6);return tmp;},py::return_value_policy::reference)
@@ -2279,7 +2095,7 @@ PYBIND11_MODULE(pyrtklib5, m) {
         .def_property_readonly("exsats",[](prcopt_t& o) {Arr1D<uint8_t>* tmp = new Arr1D<uint8_t>(o.exsats,MAXSAT);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("rnxopt",[](prcopt_t& o) {Arr2D<char>* tmp = new Arr2D<char>(o.rnxopt,2,256);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("posopt",[](prcopt_t& o) {Arr1D<int>* tmp = new Arr1D<int>(o.posopt,6);return tmp;},py::return_value_policy::reference)
-        .def_property_readonly("odisp",[](prcopt_t& o) {Arr2D<double>* tmp = new Arr2D<double>(o.odisp,2,6*11);return tmp;},py::return_value_policy::reference)
+        .def_property_readonly("odisp",[](prcopt_t& o) {Arr2D<double>* tmp = new Arr2D<double>(o.odisp,2,2);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("pppopt",[](prcopt_t& o) {Arr1D<char>* tmp = new Arr1D<char>(o.pppopt,256);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("ptr",[](prcopt_t& o){return &o;},py::return_value_policy::reference);
 
@@ -2335,11 +2151,12 @@ PYBIND11_MODULE(pyrtklib5, m) {
         .def_readwrite("autopos",&rnxopt_t::autopos)
         .def_readwrite("phshift",&rnxopt_t::phshift)
         .def_readwrite("halfcyc",&rnxopt_t::halfcyc)
+        .def_readwrite("sortsats",&rnxopt_t::sortsats)
         .def_readwrite("sep_nav",&rnxopt_t::sep_nav)
         .def_readwrite("tstart",&rnxopt_t::tstart)
         .def_readwrite("tend",&rnxopt_t::tend)
         .def_readwrite("trtcm",&rnxopt_t::trtcm)
-        .def_property_readonly("mask",[](rnxopt_t& o) {Arr2D<char>* tmp = new Arr2D<char>(o.mask,7,64);return tmp;},py::return_value_policy::reference)
+        .def_property_readonly("mask",[](rnxopt_t& o) {Arr2D<char>* tmp = new Arr2D<char>(o.mask,RNX_NUMSYS,MAXCODE+1);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("staid",[](rnxopt_t& o) {Arr1D<char>* tmp = new Arr1D<char>(o.staid,32);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("prog",[](rnxopt_t& o) {Arr1D<char>* tmp = new Arr1D<char>(o.prog,32);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("runby",[](rnxopt_t& o) {Arr1D<char>* tmp = new Arr1D<char>(o.runby,32);return tmp;},py::return_value_policy::reference)
@@ -2356,9 +2173,9 @@ PYBIND11_MODULE(pyrtklib5, m) {
         .def_property_readonly("rcvopt",[](rnxopt_t& o) {Arr1D<char>* tmp = new Arr1D<char>(o.rcvopt,256);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("exsats",[](rnxopt_t& o) {Arr1D<uint8_t>* tmp = new Arr1D<uint8_t>(o.exsats,MAXSAT);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("glofcn",[](rnxopt_t& o) {Arr1D<int>* tmp = new Arr1D<int>(o.glofcn,32);return tmp;},py::return_value_policy::reference)
-        .def_property_readonly("tobs",[](rnxopt_t& o) {Arr2D<char>* tmp = new Arr2D<char>(o.tobs,7,MAXOBSTYPE);return tmp;},py::return_value_policy::reference)
-        .def_property_readonly("shift",[](rnxopt_t& o) {Arr2D<double>* tmp = new Arr2D<double>(o.shift,7,MAXOBSTYPE);return tmp;},py::return_value_policy::reference)
-        .def_property_readonly("nobs",[](rnxopt_t& o) {Arr1D<int>* tmp = new Arr1D<int>(o.nobs,7);return tmp;},py::return_value_policy::reference)
+        .def_property_readonly("tobs",[](rnxopt_t& o) {Arr2D<char>* tmp = new Arr2D<char>(o.tobs,RNX_NUMSYS,MAXOBSTYPE);return tmp;},py::return_value_policy::reference)
+        .def_property_readonly("shift",[](rnxopt_t& o) {Arr2D<double>* tmp = new Arr2D<double>(o.shift,RNX_NUMSYS,MAXOBSTYPE);return tmp;},py::return_value_policy::reference)
+        .def_property_readonly("nobs",[](rnxopt_t& o) {Arr1D<int>* tmp = new Arr1D<int>(o.nobs,RNX_NUMSYS);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("ptr",[](rnxopt_t& o){return &o;},py::return_value_policy::reference);
 
     py::class_<ssat_t>(m,"ssat_t").def(py::init())
@@ -2370,9 +2187,10 @@ PYBIND11_MODULE(pyrtklib5, m) {
         .def_property_readonly("resc",[](ssat_t& o) {Arr1D<double>* tmp = new Arr1D<double>(o.resc,NFREQ);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("icbias",[](ssat_t& o) {Arr1D<double>* tmp = new Arr1D<double>(o.icbias,NFREQ);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("vsat",[](ssat_t& o) {Arr1D<uint8_t>* tmp = new Arr1D<uint8_t>(o.vsat,NFREQ);return tmp;},py::return_value_policy::reference)
-        .def_property_readonly("snr_rover",[](ssat_t& o) {Arr1D<uint16_t>* tmp = new Arr1D<uint16_t>(o.snr_rover,NFREQ);return tmp;},py::return_value_policy::reference)
-        .def_property_readonly("snr_base",[](ssat_t& o) {Arr1D<uint16_t>* tmp = new Arr1D<uint16_t>(o.snr_base,NFREQ);return tmp;},py::return_value_policy::reference)
+        .def_property_readonly("snr_rover",[](ssat_t& o) {Arr1D<float>* tmp = new Arr1D<float>(o.snr_rover,NFREQ);return tmp;},py::return_value_policy::reference)
+        .def_property_readonly("snr_base",[](ssat_t& o) {Arr1D<float>* tmp = new Arr1D<float>(o.snr_base,NFREQ);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("fix",[](ssat_t& o) {Arr1D<uint8_t>* tmp = new Arr1D<uint8_t>(o.fix,NFREQ);return tmp;},py::return_value_policy::reference)
+        .def_property_readonly("code",[](ssat_t& o) {Arr2D<int>* tmp = new Arr2D<int>(o.code,NFREQ,2);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("slip",[](ssat_t& o) {Arr1D<uint8_t>* tmp = new Arr1D<uint8_t>(o.slip,NFREQ);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("half",[](ssat_t& o) {Arr1D<uint8_t>* tmp = new Arr1D<uint8_t>(o.half,NFREQ);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("lock",[](ssat_t& o) {Arr1D<int>* tmp = new Arr1D<int>(o.lock,NFREQ);return tmp;},py::return_value_policy::reference)
@@ -2407,6 +2225,7 @@ PYBIND11_MODULE(pyrtklib5, m) {
         .def_readwrite("opt",&rtk_t::opt)
         .def_readwrite("initial_mode",&rtk_t::initial_mode)
         .def_readwrite("epoch",&rtk_t::epoch)
+        .def_readwrite("intpres_nb",&rtk_t::intpres_nb)
         .def_property_readonly("rb",[](rtk_t& o) {Arr1D<double>* tmp = new Arr1D<double>(o.rb,6);return tmp;},py::return_value_policy::reference)
         .def_property("x",[](rtk_t& o) {Arr1D<double>* tmp = new Arr1D<double>(o.x,-1);return tmp;},[](rtk_t& o,Arr1D<double>arr){o.x=arr.src;},py::return_value_policy::reference)
         .def_property("P",[](rtk_t& o) {Arr1D<double>* tmp = new Arr1D<double>(o.P,-1);return tmp;},[](rtk_t& o,Arr1D<double>arr){o.P=arr.src;},py::return_value_policy::reference)
@@ -2415,6 +2234,7 @@ PYBIND11_MODULE(pyrtklib5, m) {
         .def_property_readonly("ambc",[](rtk_t& o) {Arr1D<ambc_t>* tmp = new Arr1D<ambc_t>(o.ambc,MAXSAT);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("ssat",[](rtk_t& o) {Arr1D<ssat_t>* tmp = new Arr1D<ssat_t>(o.ssat,MAXSAT);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("errbuf",[](rtk_t& o) {Arr1D<char>* tmp = new Arr1D<char>(o.errbuf,MAXERRMSG);return tmp;},py::return_value_policy::reference)
+        .def_property_readonly("intpres_obsb",[](rtk_t& o) {Arr1D<obsd_t>* tmp = new Arr1D<obsd_t>(o.intpres_obsb,MAXOBS);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("ptr",[](rtk_t& o){return &o;},py::return_value_policy::reference);
 
     py::class_<raw_t>(m,"raw_t").def(py::init())
@@ -2465,7 +2285,6 @@ PYBIND11_MODULE(pyrtklib5, m) {
         .def_readwrite("tact",&stream_t::tact)
         .def_readwrite("inbt",&stream_t::inbt)
         .def_readwrite("outbt",&stream_t::outbt)
-        .def_readwrite("lock",&stream_t::lock)
         .def_property("port",[](stream_t& o) {Arr1D<void>* tmp = new Arr1D<void>(o.port,-1);return tmp;},[](stream_t& o,Arr1D<void>arr){o.port=arr.src;},py::return_value_policy::reference)
         .def_property_readonly("path",[](stream_t& o) {Arr1D<char>* tmp = new Arr1D<char>(o.path,MAXSTRPATH);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("msg",[](stream_t& o) {Arr1D<char>* tmp = new Arr1D<char>(o.msg,MAXSTRMSG);return tmp;},py::return_value_policy::reference)
@@ -2494,8 +2313,6 @@ PYBIND11_MODULE(pyrtklib5, m) {
         .def_readwrite("nstr",&strsvr_t::nstr)
         .def_readwrite("npb",&strsvr_t::npb)
         .def_readwrite("tick",&strsvr_t::tick)
-        .def_readwrite("thread",&strsvr_t::thread)
-        .def_readwrite("lock",&strsvr_t::lock)
         .def_property_readonly("cmds_periodic",[](strsvr_t& o) {Arr2D<char>* tmp = new Arr2D<char>(o.cmds_periodic,16,MAXRCVCMD);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("nmeapos",[](strsvr_t& o) {Arr1D<double>* tmp = new Arr1D<double>(o.nmeapos,3);return tmp;},py::return_value_policy::reference)
         .def_property("buff",[](strsvr_t& o) {Arr1D<uint8_t>* tmp = new Arr1D<uint8_t>(o.buff,-1);return tmp;},[](strsvr_t& o,Arr1D<uint8_t>arr){o.buff=arr.src;},py::return_value_policy::reference)
@@ -2517,12 +2334,11 @@ PYBIND11_MODULE(pyrtklib5, m) {
         .def_readwrite("rtk",&rtksvr_t::rtk)
         .def_readwrite("nav",&rtksvr_t::nav)
         .def_readwrite("tick",&rtksvr_t::tick)
-        .def_readwrite("thread",&rtksvr_t::thread)
         .def_readwrite("cputime",&rtksvr_t::cputime)
         .def_readwrite("prcout",&rtksvr_t::prcout)
         .def_readwrite("nave",&rtksvr_t::nave)
         .def_readwrite("bl_reset",&rtksvr_t::bl_reset)
-        .def_readwrite("lock",&rtksvr_t::lock)
+        .def_readwrite("pcvsr",&rtksvr_t::pcvsr)
         .def_property_readonly("nmeapos",[](rtksvr_t& o) {Arr1D<double>* tmp = new Arr1D<double>(o.nmeapos,3);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("format",[](rtksvr_t& o) {Arr1D<int>* tmp = new Arr1D<int>(o.format,3);return tmp;},py::return_value_policy::reference)
         .def_property_readonly("solopt",[](rtksvr_t& o) {Arr1D<solopt_t>* tmp = new Arr1D<solopt_t>(o.solopt,2);return tmp;},py::return_value_policy::reference)
@@ -2584,21 +2400,24 @@ PYBIND11_MODULE(pyrtklib5, m) {
     m.attr("prcopt_default") = new prcopt_t(prcopt_default);
     m.attr("solopt_default") = new solopt_t(solopt_default);
     m.def("satsys",static_cast<int(*)(int sat,Arr1D<int> Sprn)>(&satsys),"rtklib satsys");
-    m.def("satno2id",static_cast<void(*)(int sat,Arr1D<char> Sid)>(&satno2id),"rtklib satno2id");
+    m.def("dot2",static_cast<double(*)(Arr1D<double> Sa,Arr1D<double> Sb)>(&dot2),"rtklib dot2");
+    m.def("dot3",static_cast<double(*)(Arr1D<double> Sa,Arr1D<double> Sb)>(&dot3),"rtklib dot3");
     m.def("dot",static_cast<double(*)(Arr1D<double> Sa,Arr1D<double> Sb, int n)>(&dot),"rtklib dot");
     m.def("norm",static_cast<double(*)(Arr1D<double> Sa, int n)>(&norm),"rtklib norm");
     m.def("cross3",static_cast<void(*)(Arr1D<double> Sa,Arr1D<double> Sb,Arr1D<double> Sc)>(&cross3),"rtklib cross3");
     m.def("normv3",static_cast<int(*)(Arr1D<double> Sa,Arr1D<double> Sb)>(&normv3),"rtklib normv3");
     m.def("matcpy",static_cast<void(*)(Arr1D<double> SA,Arr1D<double> SB, int n, int m)>(&matcpy),"rtklib matcpy");
-    m.def("matmul",static_cast<void(*)(const char *tr, int n, int k, int m, double alpha,Arr1D<double> SA,Arr1D<double> SB, double beta,Arr1D<double> SC)>(&matmul),"rtklib matmul");
+    m.def("matmul",static_cast<void(*)(const char *tr, int n, int k, int m,Arr1D<double> SA,Arr1D<double> SB,Arr1D<double> SC)>(&matmul),"rtklib matmul");
+    m.def("matmulp",static_cast<void(*)(const char *tr, int n, int k, int m,Arr1D<double> SA,Arr1D<double> SB,Arr1D<double> SC)>(&matmulp),"rtklib matmulp");
+    m.def("matmulm",static_cast<void(*)(const char *tr, int n, int k, int m,Arr1D<double> SA,Arr1D<double> SB,Arr1D<double> SC)>(&matmulm),"rtklib matmulm");
     m.def("matinv",static_cast<int(*)(Arr1D<double> SA, int n)>(&matinv),"rtklib matinv");
     m.def("solve",static_cast<int(*)(const char *tr,Arr1D<double> SA,Arr1D<double> SY, int n, int m,Arr1D<double> SX)>(&solve),"rtklib solve");
     m.def("lsq",static_cast<int(*)(Arr1D<double> SA,Arr1D<double> Sy, int n, int m,Arr1D<double> Sx,Arr1D<double> SQ)>(&lsq),"rtklib lsq");
     m.def("filter",static_cast<int(*)(Arr1D<double> Sx,Arr1D<double> SP,Arr1D<double> SH,Arr1D<double> Sv,Arr1D<double> SR, int n, int m)>(&filter),"rtklib filter");
     m.def("smoother",static_cast<int(*)(Arr1D<double> Sxf,Arr1D<double> SQf,Arr1D<double> Sxb,Arr1D<double> SQb, int n,Arr1D<double> Sxs,Arr1D<double> SQs)>(&smoother),"rtklib smoother");
     m.def("matprint",static_cast<void(*)(Arr1D<double> SA, int n, int m, int p, int q)>(&matprint),"rtklib matprint");
-    m.def("matfprint",static_cast<void(*)(Arr1D<double> SA, int n, int m, int p, int q, const char *Ffp, const char *mode)>(&matfprint),"rtklib matfprint");
-    m.def("time2str",static_cast<void(*)(gtime_t t,Arr1D<char> Sstr, int n)>(&time2str),"rtklib time2str");
+    m.def("matfprint",static_cast<void(*)(Arr1D<double> SA, int n, int m, int p, int q, FileWrapper &Ffp)>(&matfprint),"rtklib matfprint");
+    m.def("setstr",static_cast<void(*)(Arr1D<char> Sdst, const char *src, int n)>(&setstr),"rtklib setstr");
     m.def("epoch2time",static_cast<gtime_t(*)(Arr1D<double> Sep)>(&epoch2time),"rtklib epoch2time");
     m.def("time2epoch",static_cast<void(*)(gtime_t t,Arr1D<double> Sep)>(&time2epoch),"rtklib time2epoch");
     m.def("time2epoch_n",static_cast<void(*)(gtime_t t,Arr1D<double> Sep, int n)>(&time2epoch_n),"rtklib time2epoch_n");
@@ -2620,8 +2439,8 @@ PYBIND11_MODULE(pyrtklib5, m) {
     m.def("readpos",static_cast<void(*)(const char *file, const char *rcv,Arr1D<double> Spos)>(&readpos),"rtklib readpos");
     m.def("readblq",static_cast<int(*)(const char *file, const char *sta,Arr1D<double> Sodisp)>(&readblq),"rtklib readblq");
     m.def("geterp",static_cast<int(*)(const erp_t *erp, gtime_t time,Arr1D<double> Sval)>(&geterp),"rtklib geterp");
-    m.def("tracemat",static_cast<void(*)(int level,Arr1D<double> SA, int n, int m, int p, int q)>(&tracemat),"rtklib tracemat");
-    m.def("traceb",static_cast<void(*)(int level,Arr1D<uint8_t> Sp, int n)>(&traceb),"rtklib traceb");
+    m.def("tracemat_impl",static_cast<void(*)(int level,Arr1D<double> SA, int n, int m, int p, int q)>(&tracemat_impl),"rtklib tracemat_impl");
+    m.def("traceb_impl",static_cast<void(*)(int level,Arr1D<uint8_t> Sp, int n)>(&traceb_impl),"rtklib traceb_impl");
     m.def("expath",static_cast<int(*)(const char *path,std::vector<std::string> Dpaths, int nmax)>(&expath),"rtklib expath");
     m.def("satazel",static_cast<double(*)(Arr1D<double> Spos,Arr1D<double> Se,Arr1D<double> Sazel)>(&satazel),"rtklib satazel");
     m.def("geodist",static_cast<double(*)(Arr1D<double> Srs,Arr1D<double> Srr,Arr1D<double> Se)>(&geodist),"rtklib geodist");
@@ -2641,22 +2460,22 @@ PYBIND11_MODULE(pyrtklib5, m) {
     m.def("geoidh",static_cast<double(*)(Arr1D<double> Spos)>(&geoidh),"rtklib geoidh");
     m.def("tokyo2jgd",static_cast<int(*)(Arr1D<double> Spos)>(&tokyo2jgd),"rtklib tokyo2jgd");
     m.def("jgd2tokyo",static_cast<int(*)(Arr1D<double> Spos)>(&jgd2tokyo),"rtklib jgd2tokyo");
-    m.def("outrnxobsh",static_cast<int(*)(const char *Ffp, const char *mode, const rnxopt_t *opt, const nav_t *nav)>(&outrnxobsh),"rtklib outrnxobsh");
-    m.def("outrnxobsb",static_cast<int(*)(const char *Ffp, const char *mode, const rnxopt_t *opt, const obsd_t *obs, int n, int epflag)>(&outrnxobsb),"rtklib outrnxobsb");
-    m.def("outrnxnavh",static_cast<int(*)(const char *Ffp, const char *mode, const rnxopt_t *opt, const nav_t *nav)>(&outrnxnavh),"rtklib outrnxnavh");
-    m.def("outrnxgnavh",static_cast<int(*)(const char *Ffp, const char *mode, const rnxopt_t *opt, const nav_t *nav)>(&outrnxgnavh),"rtklib outrnxgnavh");
-    m.def("outrnxhnavh",static_cast<int(*)(const char *Ffp, const char *mode, const rnxopt_t *opt, const nav_t *nav)>(&outrnxhnavh),"rtklib outrnxhnavh");
-    m.def("outrnxlnavh",static_cast<int(*)(const char *Ffp, const char *mode, const rnxopt_t *opt, const nav_t *nav)>(&outrnxlnavh),"rtklib outrnxlnavh");
-    m.def("outrnxqnavh",static_cast<int(*)(const char *Ffp, const char *mode, const rnxopt_t *opt, const nav_t *nav)>(&outrnxqnavh),"rtklib outrnxqnavh");
-    m.def("outrnxcnavh",static_cast<int(*)(const char *Ffp, const char *mode, const rnxopt_t *opt, const nav_t *nav)>(&outrnxcnavh),"rtklib outrnxcnavh");
-    m.def("outrnxinavh",static_cast<int(*)(const char *Ffp, const char *mode, const rnxopt_t *opt, const nav_t *nav)>(&outrnxinavh),"rtklib outrnxinavh");
-    m.def("outrnxnavb",static_cast<int(*)(const char *Ffp, const char *mode, const rnxopt_t *opt, const eph_t *eph)>(&outrnxnavb),"rtklib outrnxnavb");
-    m.def("outrnxgnavb",static_cast<int(*)(const char *Ffp, const char *mode, const rnxopt_t *opt, const geph_t *geph)>(&outrnxgnavb),"rtklib outrnxgnavb");
-    m.def("outrnxhnavb",static_cast<int(*)(const char *Ffp, const char *mode, const rnxopt_t *opt, const seph_t *seph)>(&outrnxhnavb),"rtklib outrnxhnavb");
+    m.def("outrnxobsh",static_cast<int(*)(FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav)>(&outrnxobsh),"rtklib outrnxobsh");
+    m.def("outrnxobsb",static_cast<int(*)(FileWrapper &Ffp, const rnxopt_t *opt, const obsd_t *obs, int n, int epflag)>(&outrnxobsb),"rtklib outrnxobsb");
+    m.def("outrnxnavh",static_cast<int(*)(FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav)>(&outrnxnavh),"rtklib outrnxnavh");
+    m.def("outrnxgnavh",static_cast<int(*)(FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav)>(&outrnxgnavh),"rtklib outrnxgnavh");
+    m.def("outrnxhnavh",static_cast<int(*)(FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav)>(&outrnxhnavh),"rtklib outrnxhnavh");
+    m.def("outrnxlnavh",static_cast<int(*)(FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav)>(&outrnxlnavh),"rtklib outrnxlnavh");
+    m.def("outrnxqnavh",static_cast<int(*)(FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav)>(&outrnxqnavh),"rtklib outrnxqnavh");
+    m.def("outrnxcnavh",static_cast<int(*)(FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav)>(&outrnxcnavh),"rtklib outrnxcnavh");
+    m.def("outrnxinavh",static_cast<int(*)(FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav)>(&outrnxinavh),"rtklib outrnxinavh");
+    m.def("outrnxnavb",static_cast<int(*)(FileWrapper &Ffp, const rnxopt_t *opt, const eph_t *eph)>(&outrnxnavb),"rtklib outrnxnavb");
+    m.def("outrnxgnavb",static_cast<int(*)(FileWrapper &Ffp, const rnxopt_t *opt, const geph_t *geph)>(&outrnxgnavb),"rtklib outrnxgnavb");
+    m.def("outrnxhnavb",static_cast<int(*)(FileWrapper &Ffp, const rnxopt_t *opt, const seph_t *seph)>(&outrnxhnavb),"rtklib outrnxhnavb");
     m.def("rtk_uncompress",static_cast<int(*)(const char *file,Arr1D<char> Suncfile)>(&rtk_uncompress),"rtklib rtk_uncompress");
     m.def("convrnx",static_cast<int(*)(int format, rnxopt_t *opt, const char *file,std::vector<std::string> Dofile)>(&convrnx),"rtklib convrnx");
-    m.def("open_rnxctr",static_cast<int(*)(rnxctr_t *rnx, const char *Ffp, const char *mode)>(&open_rnxctr),"rtklib open_rnxctr");
-    m.def("input_rnxctr",static_cast<int(*)(rnxctr_t *rnx, const char *Ffp, const char *mode)>(&input_rnxctr),"rtklib input_rnxctr");
+    m.def("open_rnxctr",static_cast<int(*)(rnxctr_t *rnx, FileWrapper &Ffp)>(&open_rnxctr),"rtklib open_rnxctr");
+    m.def("input_rnxctr",static_cast<int(*)(rnxctr_t *rnx, FileWrapper &Ffp)>(&input_rnxctr),"rtklib input_rnxctr");
     m.def("eph2pos",static_cast<void(*)(gtime_t time, const eph_t  *eph,Arr1D<double> Srs,Arr1D<double> Sdts,Arr1D<double> Svar)>(&eph2pos),"rtklib eph2pos");
     m.def("geph2pos",static_cast<void(*)(gtime_t time, const geph_t *geph,Arr1D<double> Srs,Arr1D<double> Sdts,Arr1D<double> Svar)>(&geph2pos),"rtklib geph2pos");
     m.def("seph2pos",static_cast<void(*)(gtime_t time, const seph_t *seph,Arr1D<double> Srs,Arr1D<double> Sdts,Arr1D<double> Svar)>(&seph2pos),"rtklib seph2pos");
@@ -2674,7 +2493,7 @@ PYBIND11_MODULE(pyrtklib5, m) {
     m.def("rtk_crc24q",static_cast<uint32_t(*)(Arr1D<uint8_t> Sbuff, int len)>(&rtk_crc24q),"rtklib rtk_crc24q");
     m.def("rtk_crc16",static_cast<uint16_t(*)(Arr1D<uint8_t> Sbuff, int len)>(&rtk_crc16),"rtklib rtk_crc16");
     m.def("decode_word",static_cast<int(*)(uint32_t word,Arr1D<uint8_t> Sdata)>(&decode_word),"rtklib decode_word");
-    m.def("decode_frame",static_cast<int(*)(Arr1D<uint8_t> Sbuff, eph_t *eph, alm_t *alm,Arr1D<double> Sion,Arr1D<double> Sutc)>(&decode_frame),"rtklib decode_frame");
+    m.def("decode_frame",static_cast<int(*)(Arr1D<uint8_t> Sbuff, int sys, eph_t *eph, alm_t *alm,Arr1D<double> Sion,Arr1D<double> Sutc)>(&decode_frame),"rtklib decode_frame");
     m.def("test_glostr",static_cast<int(*)(Arr1D<uint8_t> Sbuff)>(&test_glostr),"rtklib test_glostr");
     m.def("decode_glostr",static_cast<int(*)(Arr1D<uint8_t> Sbuff, geph_t *geph,Arr1D<double> Sutc)>(&decode_glostr),"rtklib decode_glostr");
     m.def("decode_bds_d1",static_cast<int(*)(Arr1D<uint8_t> Sbuff, eph_t *eph,Arr1D<double> Sion,Arr1D<double> Sutc)>(&decode_bds_d1),"rtklib decode_bds_d1");
@@ -2682,24 +2501,25 @@ PYBIND11_MODULE(pyrtklib5, m) {
     m.def("decode_gal_inav",static_cast<int(*)(Arr1D<uint8_t> Sbuff, eph_t *eph,Arr1D<double> Sion,Arr1D<double> Sutc)>(&decode_gal_inav),"rtklib decode_gal_inav");
     m.def("decode_gal_fnav",static_cast<int(*)(Arr1D<uint8_t> Sbuff, eph_t *eph,Arr1D<double> Sion,Arr1D<double> Sutc)>(&decode_gal_fnav),"rtklib decode_gal_fnav");
     m.def("decode_irn_nav",static_cast<int(*)(Arr1D<uint8_t> Sbuff, eph_t *eph,Arr1D<double> Sion,Arr1D<double> Sutc)>(&decode_irn_nav),"rtklib decode_irn_nav");
-    m.def("input_rawf",static_cast<int(*)(raw_t *raw, int format, const char *Ffp, const char *mode)>(&input_rawf),"rtklib input_rawf");
-    m.def("input_oem4f",static_cast<int(*)(raw_t *raw, const char *Ffp, const char *mode)>(&input_oem4f),"rtklib input_oem4f");
-    //m.def("input_cnavf",static_cast<int(*)(raw_t *raw, const char *Ffp, const char *mode)>(&input_cnavf),"rtklib input_cnavf");
-    m.def("input_ubxf",static_cast<int(*)(raw_t *raw, const char *Ffp, const char *mode)>(&input_ubxf),"rtklib input_ubxf");
-    m.def("input_sbpf",static_cast<int(*)(raw_t *raw, const char *Ffp, const char *mode)>(&input_sbpf),"rtklib input_sbpf");
-    m.def("input_cresf",static_cast<int(*)(raw_t *raw, const char *Ffp, const char *mode)>(&input_cresf),"rtklib input_cresf");
-    m.def("input_stqf",static_cast<int(*)(raw_t *raw, const char *Ffp, const char *mode)>(&input_stqf),"rtklib input_stqf");
-    m.def("input_javadf",static_cast<int(*)(raw_t *raw, const char *Ffp, const char *mode)>(&input_javadf),"rtklib input_javadf");
-    m.def("input_nvsf",static_cast<int(*)(raw_t *raw, const char *Ffp, const char *mode)>(&input_nvsf),"rtklib input_nvsf");
-    m.def("input_bnxf",static_cast<int(*)(raw_t *raw, const char *Ffp, const char *mode)>(&input_bnxf),"rtklib input_bnxf");
-    m.def("input_rt17f",static_cast<int(*)(raw_t *raw, const char *Ffp, const char *mode)>(&input_rt17f),"rtklib input_rt17f");
-    m.def("input_sbff",static_cast<int(*)(raw_t *raw, const char *Ffp, const char *mode)>(&input_sbff),"rtklib input_sbff");
-    //m.def("input_tersusf",static_cast<int(*)(raw_t *raw, const char *Ffp, const char *mode)>(&input_tersusf),"rtklib input_tersusf");
+    m.def("input_rawf",static_cast<int(*)(raw_t *raw, int format, FileWrapper &Ffp)>(&input_rawf),"rtklib input_rawf");
+    m.def("input_oem4f",static_cast<int(*)(raw_t *raw, FileWrapper &Ffp)>(&input_oem4f),"rtklib input_oem4f");
+    // m.def("input_cnavf",static_cast<int(*)(raw_t *raw, FileWrapper &Ffp)>(&input_cnavf),"rtklib input_cnavf");
+    m.def("input_ubxf",static_cast<int(*)(raw_t *raw, FileWrapper &Ffp)>(&input_ubxf),"rtklib input_ubxf");
+    m.def("input_sbpf",static_cast<int(*)(raw_t *raw, FileWrapper &Ffp)>(&input_sbpf),"rtklib input_sbpf");
+    m.def("input_cresf",static_cast<int(*)(raw_t *raw, FileWrapper &Ffp)>(&input_cresf),"rtklib input_cresf");
+    m.def("input_stqf",static_cast<int(*)(raw_t *raw, FileWrapper &Ffp)>(&input_stqf),"rtklib input_stqf");
+    m.def("input_javadf",static_cast<int(*)(raw_t *raw, FileWrapper &Ffp)>(&input_javadf),"rtklib input_javadf");
+    m.def("input_nvsf",static_cast<int(*)(raw_t *raw, FileWrapper &Ffp)>(&input_nvsf),"rtklib input_nvsf");
+    m.def("input_bnxf",static_cast<int(*)(raw_t *raw, FileWrapper &Ffp)>(&input_bnxf),"rtklib input_bnxf");
+    m.def("input_rt17f",static_cast<int(*)(raw_t *raw, FileWrapper &Ffp)>(&input_rt17f),"rtklib input_rt17f");
+    m.def("input_sbff",static_cast<int(*)(raw_t *raw, FileWrapper &Ffp)>(&input_sbff),"rtklib input_sbff");
+    // m.def("input_tersusf",static_cast<int(*)(raw_t *raw, FileWrapper &Ffp)>(&input_tersusf),"rtklib input_tersusf");
+    m.def("input_unicoref",static_cast<int(*)(raw_t *raw, FileWrapper &Ffp)>(&input_unicoref),"rtklib input_unicoref");
     m.def("gen_ubx",static_cast<int(*)(const char *msg,Arr1D<uint8_t> Sbuff)>(&gen_ubx),"rtklib gen_ubx");
     m.def("gen_stq",static_cast<int(*)(const char *msg,Arr1D<uint8_t> Sbuff)>(&gen_stq),"rtklib gen_stq");
     m.def("gen_nvs",static_cast<int(*)(const char *msg,Arr1D<uint8_t> Sbuff)>(&gen_nvs),"rtklib gen_nvs");
-    m.def("input_rtcm2f",static_cast<int(*)(rtcm_t *rtcm, const char *Ffp, const char *mode)>(&input_rtcm2f),"rtklib input_rtcm2f");
-    m.def("input_rtcm3f",static_cast<int(*)(rtcm_t *rtcm, const char *Ffp, const char *mode)>(&input_rtcm3f),"rtklib input_rtcm3f");
+    m.def("input_rtcm2f",static_cast<int(*)(rtcm_t *rtcm, FileWrapper &Ffp)>(&input_rtcm2f),"rtklib input_rtcm2f");
+    m.def("input_rtcm3f",static_cast<int(*)(rtcm_t *rtcm, FileWrapper &Ffp)>(&input_rtcm3f),"rtklib input_rtcm3f");
     m.def("readsol",static_cast<int(*)(std::vector<std::string> Dfiles, int nfile, solbuf_t *sol)>(&readsol),"rtklib readsol");
     m.def("readsolt",static_cast<int(*)(std::vector<std::string> Dfiles, int nfile, gtime_t ts, gtime_t te, double tint, int qflag, solbuf_t *sol)>(&readsolt),"rtklib readsolt");
     m.def("readsolstat",static_cast<int(*)(std::vector<std::string> Dfiles, int nfile, solstatbuf_t *statbuf)>(&readsolstat),"rtklib readsolstat");
@@ -2708,17 +2528,17 @@ PYBIND11_MODULE(pyrtklib5, m) {
     m.def("outsolheads",static_cast<int(*)(Arr1D<uint8_t> Sbuff, const solopt_t *opt)>(&outsolheads),"rtklib outsolheads");
     m.def("outsols",static_cast<int(*)(Arr1D<uint8_t> Sbuff, const sol_t *sol,Arr1D<double> Srb, const solopt_t *opt)>(&outsols),"rtklib outsols");
     m.def("outsolexs",static_cast<int(*)(Arr1D<uint8_t> Sbuff, const sol_t *sol, const ssat_t *ssat, const solopt_t *opt)>(&outsolexs),"rtklib outsolexs");
-    m.def("outprcopt",static_cast<void(*)(const char *Ffp, const char *mode, const prcopt_t *opt)>(&outprcopt),"rtklib outprcopt");
-    m.def("outsolhead",static_cast<void(*)(const char *Ffp, const char *mode, const solopt_t *opt)>(&outsolhead),"rtklib outsolhead");
-    m.def("outsol",static_cast<void(*)(const char *Ffp, const char *mode, const sol_t *sol,Arr1D<double> Srb, const solopt_t *opt)>(&outsol),"rtklib outsol");
-    m.def("outsolex",static_cast<void(*)(const char *Ffp, const char *mode, const sol_t *sol, const ssat_t *ssat, const solopt_t *opt)>(&outsolex),"rtklib outsolex");
+    m.def("outprcopt",static_cast<void(*)(FileWrapper &Ffp, const prcopt_t *opt)>(&outprcopt),"rtklib outprcopt");
+    m.def("outsolhead",static_cast<void(*)(FileWrapper &Ffp, const solopt_t *opt)>(&outsolhead),"rtklib outsolhead");
+    m.def("outsol",static_cast<void(*)(FileWrapper &Ffp, const sol_t *sol,Arr1D<double> Srb, const solopt_t *opt)>(&outsol),"rtklib outsol");
+    m.def("outsolex",static_cast<void(*)(FileWrapper &Ffp, const sol_t *sol, const ssat_t *ssat, const solopt_t *opt)>(&outsolex),"rtklib outsolex");
     m.def("outnmea_rmc",static_cast<int(*)(Arr1D<uint8_t> Sbuff, const sol_t *sol)>(&outnmea_rmc),"rtklib outnmea_rmc");
     m.def("outnmea_gga",static_cast<int(*)(Arr1D<uint8_t> Sbuff, const sol_t *sol)>(&outnmea_gga),"rtklib outnmea_gga");
     m.def("outnmea_gsa",static_cast<int(*)(Arr1D<uint8_t> Sbuff, const sol_t *sol, const ssat_t *ssat)>(&outnmea_gsa),"rtklib outnmea_gsa");
     m.def("outnmea_gsv",static_cast<int(*)(Arr1D<uint8_t> Sbuff, const sol_t *sol, const ssat_t *ssat)>(&outnmea_gsv),"rtklib outnmea_gsv");
     m.def("convkml",static_cast<int(*)(const char *infile, const char *outfile, gtime_t ts, gtime_t te, double tint, int qflg,Arr1D<double> Soffset, int tcolor, int pcolor, int outalt, int outtime)>(&convkml),"rtklib convkml");
     m.def("convgpx",static_cast<int(*)(const char *infile, const char *outfile, gtime_t ts, gtime_t te, double tint, int qflg,Arr1D<double> Soffset, int outtrk, int outpnt, int outalt, int outtime)>(&convgpx),"rtklib convgpx");
-    m.def("sbsoutmsg",static_cast<void(*)(const char *Ffp, const char *mode, sbsmsg_t *sbsmsg)>(&sbsoutmsg),"rtklib sbsoutmsg");
+    m.def("sbsoutmsg",static_cast<void(*)(FileWrapper &Ffp, sbsmsg_t *sbsmsg)>(&sbsoutmsg),"rtklib sbsoutmsg");
     m.def("sbsdecodemsg",static_cast<int(*)(gtime_t time, int prn,Arr1D<uint32_t> Swords, sbsmsg_t *sbsmsg)>(&sbsdecodemsg),"rtklib sbsdecodemsg");
     m.def("sbssatcorr",static_cast<int(*)(gtime_t time, int sat, const nav_t *nav,Arr1D<double> Srs,Arr1D<double> Sdts,Arr1D<double> Svar)>(&sbssatcorr),"rtklib sbssatcorr");
     m.def("sbsioncorr",static_cast<int(*)(gtime_t time, const nav_t *nav,Arr1D<double> Spos,Arr1D<double> Sazel,Arr1D<double> Sdelay,Arr1D<double> Svar)>(&sbsioncorr),"rtklib sbsioncorr");
@@ -2735,10 +2555,11 @@ PYBIND11_MODULE(pyrtklib5, m) {
     m.def("lambda_reduction",static_cast<int(*)(int n,Arr1D<double> SQ,Arr1D<double> SZ)>(&lambda_reduction),"rtklib lambda_reduction");
     m.def("lambda_search",static_cast<int(*)(int n, int m,Arr1D<double> Sa,Arr1D<double> SQ,Arr1D<double> SF,Arr1D<double> Ss)>(&lambda_search),"rtklib lambda_search");
     m.def("pntpos",static_cast<int(*)(const obsd_t *obs, int n, const nav_t *nav, const prcopt_t *opt, sol_t *sol,Arr1D<double> Sazel, ssat_t *ssat,Arr1D<char> Smsg)>(&pntpos),"rtklib pntpos");
-    m.def("rtkoutstat",static_cast<int(*)(rtk_t *rtk,Arr1D<char> Sbuff)>(&rtkoutstat),"rtklib rtkoutstat");
+    m.def("rtkoutstat",static_cast<int(*)(rtk_t *rtk, int level,Arr1D<char> Sbuff)>(&rtkoutstat),"rtklib rtkoutstat");
     m.def("pppoutstat",static_cast<int(*)(rtk_t *rtk,Arr1D<char> Sbuff)>(&pppoutstat),"rtklib pppoutstat");
     m.def("ppp_ar",static_cast<int(*)(rtk_t *rtk, const obsd_t *obs, int n,Arr1D<int> Sexc, const nav_t *nav,Arr1D<double> Sazel,Arr1D<double> Sx,Arr1D<double> SP)>(&ppp_ar),"rtklib ppp_ar");
-    m.def("postpos",static_cast<int(*)(gtime_t ts, gtime_t te, double ti, double tu, const prcopt_t *popt, const solopt_t *sopt, const filopt_t *fopt,std::vector<std::string> Dinfile, int n,Arr1D<char> Soutfile, const char *rov, const char *base)>(&postpos),"rtklib postpos");
+    m.def("postpos",static_cast<int(*)(gtime_t ts, gtime_t te, double ti, double tu, const prcopt_t *popt, const solopt_t *sopt, const filopt_t *fopt,std::vector<std::string> Dinfile, int n, const char *outfile, const char *rov, const char *base)>(&postpos),"rtklib postpos");
+    m.def("getstapos",static_cast<int(*)(const char *file, const char *name,Arr1D<double> Sr)>(&getstapos),"rtklib getstapos");
     m.def("strsvrstart",static_cast<int(*)(strsvr_t *svr,Arr1D<int> Sopts,Arr1D<int> Sstrs,std::vector<std::string> Dpaths,std::vector<std::string> Dlogs,std::vector<std::vector<strconv_t>> Dconv,std::vector<std::string> Dcmds,std::vector<std::string> Dcmds_priodic,Arr1D<double> Snmeapos)>(&strsvrstart),"rtklib strsvrstart");
     m.def("strsvrstop",static_cast<void(*)(strsvr_t *svr,std::vector<std::string> Dcmds)>(&strsvrstop),"rtklib strsvrstop");
     m.def("strsvrstat",static_cast<void(*)(strsvr_t *svr,Arr1D<int> Sstat,Arr1D<int> Slog_stat,Arr1D<int> Sbyte,Arr1D<int> Sbps,Arr1D<char> Smsg)>(&strsvrstat),"rtklib strsvrstat");
@@ -2748,47 +2569,12 @@ PYBIND11_MODULE(pyrtklib5, m) {
     m.def("rtksvrsstat",static_cast<void(*)(rtksvr_t *svr,Arr1D<int> Ssstat,Arr1D<char> Smsg)>(&rtksvrsstat),"rtklib rtksvrsstat");
     m.def("dl_readurls",static_cast<int(*)(const char *file,std::vector<std::string> Dtypes, int ntype, url_t *urls, int nmax)>(&dl_readurls),"rtklib dl_readurls");
     m.def("dl_readstas",static_cast<int(*)(const char *file,std::vector<std::string> Dstas, int nmax)>(&dl_readstas),"rtklib dl_readstas");
-    m.def("dl_exec",static_cast<int(*)(gtime_t ts, gtime_t te, double ti, int seqnos, int seqnoe, const url_t *urls, int nurl,std::vector<std::string> Dstas, int nsta, const char *dir, const char *usr, const char *pwd, const char *proxy, int opts,Arr1D<char> Smsg, const char *Ffp, const char *mode)>(&dl_exec),"rtklib dl_exec");
-    m.def("dl_test",static_cast<void(*)(gtime_t ts, gtime_t te, double ti, const url_t *urls, int nurl,std::vector<std::string> Dstas, int nsta, const char *dir, int ncol, int datefmt, const char *Ffp, const char *mode)>(&dl_test),"rtklib dl_test");
-    m.def("matfprint",static_cast<void(*)(Arr1D<double> SA, int n, int m, int p, int q, FileWrapper &Ffp)>(&matfprint),"rtklib matfprint");
-    m.def("outrnxobsh",static_cast<int(*)(FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav)>(&outrnxobsh),"rtklib outrnxobsh");
-    m.def("outrnxobsb",static_cast<int(*)(FileWrapper &Ffp, const rnxopt_t *opt, const obsd_t *obs, int n, int epflag)>(&outrnxobsb),"rtklib outrnxobsb");
-    m.def("outrnxnavh",static_cast<int(*)(FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav)>(&outrnxnavh),"rtklib outrnxnavh");
-    m.def("outrnxgnavh",static_cast<int(*)(FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav)>(&outrnxgnavh),"rtklib outrnxgnavh");
-    m.def("outrnxhnavh",static_cast<int(*)(FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav)>(&outrnxhnavh),"rtklib outrnxhnavh");
-    m.def("outrnxlnavh",static_cast<int(*)(FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav)>(&outrnxlnavh),"rtklib outrnxlnavh");
-    m.def("outrnxqnavh",static_cast<int(*)(FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav)>(&outrnxqnavh),"rtklib outrnxqnavh");
-    m.def("outrnxcnavh",static_cast<int(*)(FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav)>(&outrnxcnavh),"rtklib outrnxcnavh");
-    m.def("outrnxinavh",static_cast<int(*)(FileWrapper &Ffp, const rnxopt_t *opt, const nav_t *nav)>(&outrnxinavh),"rtklib outrnxinavh");
-    m.def("outrnxnavb",static_cast<int(*)(FileWrapper &Ffp, const rnxopt_t *opt, const eph_t *eph)>(&outrnxnavb),"rtklib outrnxnavb");
-    m.def("outrnxgnavb",static_cast<int(*)(FileWrapper &Ffp, const rnxopt_t *opt, const geph_t *geph)>(&outrnxgnavb),"rtklib outrnxgnavb");
-    m.def("outrnxhnavb",static_cast<int(*)(FileWrapper &Ffp, const rnxopt_t *opt, const seph_t *seph)>(&outrnxhnavb),"rtklib outrnxhnavb");
-    m.def("open_rnxctr",static_cast<int(*)(rnxctr_t *rnx, FileWrapper &Ffp)>(&open_rnxctr),"rtklib open_rnxctr");
-    m.def("input_rnxctr",static_cast<int(*)(rnxctr_t *rnx, FileWrapper &Ffp)>(&input_rnxctr),"rtklib input_rnxctr");
-    m.def("input_rawf",static_cast<int(*)(raw_t *raw, int format, FileWrapper &Ffp)>(&input_rawf),"rtklib input_rawf");
-    m.def("input_oem4f",static_cast<int(*)(raw_t *raw, FileWrapper &Ffp)>(&input_oem4f),"rtklib input_oem4f");
-    // m.def("input_cnavf",static_cast<int(*)(raw_t *raw, FileWrapper &Ffp)>(&input_cnavf),"rtklib input_cnavf");
-    m.def("input_ubxf",static_cast<int(*)(raw_t *raw, FileWrapper &Ffp)>(&input_ubxf),"rtklib input_ubxf");
-    m.def("input_sbpf",static_cast<int(*)(raw_t *raw, FileWrapper &Ffp)>(&input_sbpf),"rtklib input_sbpf");
-    m.def("input_cresf",static_cast<int(*)(raw_t *raw, FileWrapper &Ffp)>(&input_cresf),"rtklib input_cresf");
-    m.def("input_stqf",static_cast<int(*)(raw_t *raw, FileWrapper &Ffp)>(&input_stqf),"rtklib input_stqf");
-    m.def("input_javadf",static_cast<int(*)(raw_t *raw, FileWrapper &Ffp)>(&input_javadf),"rtklib input_javadf");
-    m.def("input_nvsf",static_cast<int(*)(raw_t *raw, FileWrapper &Ffp)>(&input_nvsf),"rtklib input_nvsf");
-    m.def("input_bnxf",static_cast<int(*)(raw_t *raw, FileWrapper &Ffp)>(&input_bnxf),"rtklib input_bnxf");
-    m.def("input_rt17f",static_cast<int(*)(raw_t *raw, FileWrapper &Ffp)>(&input_rt17f),"rtklib input_rt17f");
-    m.def("input_sbff",static_cast<int(*)(raw_t *raw, FileWrapper &Ffp)>(&input_sbff),"rtklib input_sbff");
-    //m.def("input_tersusf",static_cast<int(*)(raw_t *raw, FileWrapper &Ffp)>(&input_tersusf),"rtklib input_tersusf");
-    m.def("input_rtcm2f",static_cast<int(*)(rtcm_t *rtcm, FileWrapper &Ffp)>(&input_rtcm2f),"rtklib input_rtcm2f");
-    m.def("input_rtcm3f",static_cast<int(*)(rtcm_t *rtcm, FileWrapper &Ffp)>(&input_rtcm3f),"rtklib input_rtcm3f");
-    m.def("outprcopt",static_cast<void(*)(FileWrapper &Ffp, const prcopt_t *opt)>(&outprcopt),"rtklib outprcopt");
-    m.def("outsolhead",static_cast<void(*)(FileWrapper &Ffp, const solopt_t *opt)>(&outsolhead),"rtklib outsolhead");
-    m.def("outsol",static_cast<void(*)(FileWrapper &Ffp, const sol_t *sol,Arr1D<double> Srb, const solopt_t *opt)>(&outsol),"rtklib outsol");
-    m.def("outsolex",static_cast<void(*)(FileWrapper &Ffp, const sol_t *sol, const ssat_t *ssat, const solopt_t *opt)>(&outsolex),"rtklib outsolex");
-    m.def("sbsoutmsg",static_cast<void(*)(FileWrapper &Ffp, sbsmsg_t *sbsmsg)>(&sbsoutmsg),"rtklib sbsoutmsg");
     m.def("dl_exec",static_cast<int(*)(gtime_t ts, gtime_t te, double ti, int seqnos, int seqnoe, const url_t *urls, int nurl,std::vector<std::string> Dstas, int nsta, const char *dir, const char *usr, const char *pwd, const char *proxy, int opts,Arr1D<char> Smsg, FileWrapper &Ffp)>(&dl_exec),"rtklib dl_exec");
     m.def("dl_test",static_cast<void(*)(gtime_t ts, gtime_t te, double ti, const url_t *urls, int nurl,std::vector<std::string> Dstas, int nsta, const char *dir, int ncol, int datefmt, FileWrapper &Ffp)>(&dl_test),"rtklib dl_test");
+    m.def("satno2id",static_cast<void(*)(int sat,Arr1D<char> Sid)>(&satno2id),"rtklib satno2id");
     m.def("satno",&satno,"rtklib satno");
     m.def("satid2no",&satid2no,"rtklib satid2no");
+    //m.def("satno2id",&satno2id,"rtklib satno2id");
     m.def("obs2code",&obs2code,"rtklib obs2code");
     m.def("code2obs",&code2obs,"rtklib code2obs");
     m.def("code2freq",&code2freq,"rtklib code2freq");
@@ -2804,10 +2590,10 @@ PYBIND11_MODULE(pyrtklib5, m) {
     m.def("eye",&eye,"rtklib eye");
     m.def("str2num",&str2num,"rtklib str2num");
     m.def("str2time",&str2time,"rtklib str2time");
+    m.def("time2str",&time2str,"rtklib time2str");
     m.def("gpst2time",&gpst2time,"rtklib gpst2time");
     m.def("gst2time",&gst2time,"rtklib gst2time");
     m.def("bdt2time",&bdt2time,"rtklib bdt2time");
-    m.def("time_str",&time_str,"rtklib time_str");
     m.def("timeadd",&timeadd,"rtklib timeadd");
     m.def("timediff",&timediff,"rtklib timediff");
     m.def("gpst2utc",&gpst2utc,"rtklib gpst2utc");
@@ -2834,19 +2620,20 @@ PYBIND11_MODULE(pyrtklib5, m) {
     m.def("traceopen",&traceopen,"rtklib traceopen");
     m.def("traceclose",&traceclose,"rtklib traceclose");
     m.def("tracelevel",&tracelevel,"rtklib tracelevel");
-    m.def("traceobs",&traceobs,"rtklib traceobs");
-    m.def("tracenav",&tracenav,"rtklib tracenav");
-    m.def("tracegnav",&tracegnav,"rtklib tracegnav");
-    m.def("tracehnav",&tracehnav,"rtklib tracehnav");
-    m.def("tracepeph",&tracepeph,"rtklib tracepeph");
-    m.def("tracepclk",&tracepclk,"rtklib tracepclk");
     m.def("gettracelevel",&gettracelevel,"rtklib gettracelevel");
+    m.def("traceobs_impl",&traceobs_impl,"rtklib traceobs_impl");
+    m.def("tracenav_impl",&tracenav_impl,"rtklib tracenav_impl");
+    m.def("tracegnav_impl",&tracegnav_impl,"rtklib tracegnav_impl");
+    m.def("tracehnav_impl",&tracehnav_impl,"rtklib tracehnav_impl");
+    m.def("tracepeph_impl",&tracepeph_impl,"rtklib tracepeph_impl");
+    m.def("tracepclk_impl",&tracepclk_impl,"rtklib tracepclk_impl");
     m.def("execcmd",&execcmd,"rtklib execcmd");
     m.def("createdir",&createdir,"rtklib createdir");
     m.def("readtec",&readtec,"rtklib readtec");
     m.def("seliflc",&seliflc,"rtklib seliflc");
     m.def("readpcv",&readpcv,"rtklib readpcv");
     m.def("searchpcv",&searchpcv,"rtklib searchpcv");
+    m.def("free_pcvs",&free_pcvs,"rtklib free_pcvs");
     m.def("opengeoid",&opengeoid,"rtklib opengeoid");
     m.def("closegeoid",&closegeoid,"rtklib closegeoid");
     m.def("loaddatump",&loaddatump,"rtklib loaddatump");
@@ -2864,19 +2651,17 @@ PYBIND11_MODULE(pyrtklib5, m) {
     m.def("readsap",&readsap,"rtklib readsap");
     m.def("readdcb",&readdcb,"rtklib readdcb");
     m.def("code2bias_ix",&code2bias_ix,"rtklib code2bias_ix");
-    //m.def("readfcb",&readfcb,"rtklib readfcb");
     m.def("tle_read",&tle_read,"rtklib tle_read");
     m.def("tle_name_read",&tle_name_read,"rtklib tle_name_read");
     m.def("init_raw",&init_raw,"rtklib init_raw");
     m.def("free_raw",&free_raw,"rtklib free_raw");
     m.def("input_raw",&input_raw,"rtklib input_raw");
     m.def("init_rt17",&init_rt17,"rtklib init_rt17");
-    //m.def("init_cmr",&init_cmr,"rtklib init_cmr");
+    m.def("init_sbf",&init_sbf,"rtklib init_sbf");
     m.def("free_rt17",&free_rt17,"rtklib free_rt17");
-    //m.def("free_cmr",&free_cmr,"rtklib free_cmr");
-    //m.def("update_cmr",&update_cmr,"rtklib update_cmr");
+    m.def("free_sbf",&free_sbf,"rtklib free_sbf");
     m.def("input_oem4",&input_oem4,"rtklib input_oem4");
-    //m.def("input_cnav",&input_cnav,"rtklib input_cnav");
+    // m.def("input_cnav",&input_cnav,"rtklib input_cnav");
     m.def("input_ubx",&input_ubx,"rtklib input_ubx");
     m.def("input_sbp",&input_sbp,"rtklib input_sbp");
     m.def("input_cres",&input_cres,"rtklib input_cres");
@@ -2886,7 +2671,8 @@ PYBIND11_MODULE(pyrtklib5, m) {
     m.def("input_bnx",&input_bnx,"rtklib input_bnx");
     m.def("input_rt17",&input_rt17,"rtklib input_rt17");
     m.def("input_sbf",&input_sbf,"rtklib input_sbf");
-    //m.def("input_tersus",&input_tersus,"rtklib input_tersus");
+    // m.def("input_tersus",&input_tersus,"rtklib input_tersus");
+    m.def("input_unicore",&input_unicore,"rtklib input_unicore");
     m.def("init_rtcm",&init_rtcm,"rtklib init_rtcm");
     m.def("free_rtcm",&free_rtcm,"rtklib free_rtcm");
     m.def("input_rtcm2",&input_rtcm2,"rtklib input_rtcm2");

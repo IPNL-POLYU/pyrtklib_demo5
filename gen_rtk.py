@@ -159,11 +159,22 @@ def gen_multidef(funcs):
 	tmp = ""
 	i = funcs
 	tmp += i['multidef'].rstrip('; ')+"{\n"
+	# for j in i['dconvert']:
+	# 	if j[0] == "char":
+	# 		tmp += "    %s **%s = convertChar(D%s);\n"%(j[0],j[1],j[1])
+	# 	else:
+	# 		tmp += "    %s **%s = convertType(D%s);\n"%(j[0],j[1],j[1])
 	for j in i['dconvert']:
-		if j[0] == "char":
-			tmp += "    %s **%s = convertChar(D%s);\n"%(j[0],j[1],j[1])
+		raw_type = j[0]
+		param_name = j[1]
+		base_type = raw_type.replace('const', '').replace('unsigned', '').strip()
+		if base_type == "char":
+			if "const" in raw_type:
+				tmp += "    const char **%s = convertToConstCharPtrArray(D%s);\n" % (param_name, param_name)
+			else:
+				tmp += "    char **%s = convertChar(D%s);\n" % (param_name, param_name)
 		else:
-			tmp += "    %s **%s = convertType(D%s);\n"%(j[0],j[1],j[1])
+			tmp += "    %s **%s = convertType(D%s);\n" % (raw_type, param_name, param_name)
 	for j in i['sconvert']:
 		tmp += "    %s *%s = S%s.src;\n"%(j[0],j[1],j[1])
 	if i['fconvert']:
@@ -184,8 +195,20 @@ def gen_multidef(funcs):
 		tmp += "    return tmp;\n}\n"
 	else:
 		tmp += "    %s(%s);\n"%(i['name'],params)
+		# for j in i['dconvert']:
+		# 	tmp += '    free(%s);\n'%j[1]
 		for j in i['dconvert']:
-			tmp += '    free(%s);\n'%j[1]
+			raw_type = j[0]
+			param_name = j[1]
+			base_type = raw_type.replace('const', '').replace('unsigned', '').strip()
+
+			if base_type == "char":
+				if "const" in raw_type:
+					tmp += '    freeConstCharPtrArray(%s);\n' % param_name
+				else:
+					tmp += '    free(%s);\n' % param_name
+			else:
+				tmp += '    free(%s);\n' % param_name
 		if i['fconvert']:
 			#tmp += '	fclose(fp);\n'
 			pass
@@ -210,8 +233,8 @@ DEFINE = ['ENACMP','ENAGAL','ENAGLO','ENAQZS','ENAIRN']
 with open('pyrtklib5/rtksrc/rtklib.h','r') as f:
 	src = f.read()
 defines = getDefine(src,DEFINE)
-defines.append(['VER_RTKLIB','"demo5"'])
-defines.append(['PATCH_LEVEL','"b34h"'])
+defines.append(['VER_RTKLIB','"EX"'])
+defines.append(['PATCH_LEVEL','"2.5.0"'])
 src = remover(src)
 rec = re.compile('extern "C" {(.*)}',re.DOTALL)
 src = rec.findall(src)[0]
@@ -221,6 +244,8 @@ src = src.replace('__attribute__ ((aligned (8)))',"")
 src = src.replace('EXPORT void add_fatal(fatalfunc_t *func);',"")
 src = src.replace('typedef void fatalfunc_t(const char *);',"")
 src = src.replace('EXPORT','extern')
+src = src.replace('rtklib_lock_t lock;',"")
+src = src.replace('rtklib_thread_t thread;',"")
 src = "typedef long time_t;\ntypedef long lock_t;\ntypedef long thread_t;\ntypedef long FILE;\ntypedef unsigned char uint8_t;\ntypedef unsigned short int uint16_t;\ntypedef unsigned int uint32_t;\ntypedef short int int16_t;\ntypedef int int32_t;\n"+src
 src = re.sub('\\n+','\\n',re.sub(' \\n','\\n',src).strip())
 parser = pycparser.CParser()
@@ -319,15 +344,32 @@ for e in elements:
 							F += 1
 							continue
 						if k.find('**') != -1:
-							ttt = k.strip().split(' ')[0]
-							nnn = k.strip().split(' ')[1].strip('*')
-							proper['dconvert'].append((ttt,nnn))
-							if ttt == 'char':
-								lll = lll.replace(k,'std::vector<std::string> '+"D"+nnn)
+							parts = k.strip().rsplit(' ', 1)
+							if len(parts) < 2:
+								continue
+							type_part = parts[0].strip()
+							param_name = parts[1].strip('*')
+							base_type = type_part.replace('const', '').replace('unsigned', '').strip()
+
+							proper['dconvert'].append((type_part, param_name))
+
+							if base_type == 'char':
+								lll = lll.replace(k, 'std::vector<std::string> D' + param_name)
 							else:
-								lll = lll.replace(k,'std::vector<std::vector<%s>> '%ttt+"D"+nnn)
+								lll = lll.replace(k, 'std::vector<std::vector<%s>> D' % base_type + param_name)
+
 							D += 1
 							continue
+						# if k.find('**') != -1:
+						# 	ttt = k.strip().split(' ')[0]
+						# 	nnn = k.strip().split(' ')[1].strip('*')
+						# 	proper['dconvert'].append((ttt,nnn))
+						# 	if ttt == 'char':
+						# 		lll = lll.replace(k,'std::vector<std::string> '+"D"+nnn)
+						# 	else:
+						# 		lll = lll.replace(k,'std::vector<std::vector<%s>> '%ttt+"D"+nnn)
+						# 	D += 1
+						# 	continue
 						if k.find('*') != -1:
 							if k.find('const char') != -1:
 								continue

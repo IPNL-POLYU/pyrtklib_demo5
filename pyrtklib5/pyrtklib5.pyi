@@ -3,7 +3,7 @@ rtklib python interface by pybind11
 """
 from __future__ import annotations
 import typing
-__all__ = ['ARMODE_CONT', 'ARMODE_FIXHOLD', 'ARMODE_INST', 'ARMODE_OFF', 'AS2R', 'AU', 'Arr1Dalm_t', 'Arr1Dambc_t', 'Arr1Dchar', 'Arr1Ddgps_t', 'Arr1Ddouble', 'Arr1Deph_t', 'Arr1Derp_t', 'Arr1Derpd_t', 'Arr1Dfilopt_t', 'Arr1Dfloat', 'Arr1Dgeph_t', 'Arr1Dgis_pnt_t', 'Arr1Dgis_poly_t', 'Arr1Dgis_polygon_t', 'Arr1Dgis_t', 'Arr1Dgisd_t', 'Arr1Dgtime_t', 'Arr1Dint', 'Arr1Dlong', 'Arr1Dnav_t', 'Arr1Dobs_t', 'Arr1Dobsd_t', 'Arr1Dopt_t', 'Arr1Dpclk_t', 'Arr1Dpcv_t', 'Arr1Dpcvs_t', 'Arr1Dpeph_t', 'Arr1Dprcopt_t', 'Arr1Draw_t', 'Arr1Drnxctr_t', 'Arr1Drnxopt_t', 'Arr1Drtcm_t', 'Arr1Drtk_t', 'Arr1Drtksvr_t', 'Arr1Dsbs_t', 'Arr1Dsbsfcorr_t', 'Arr1Dsbsigp_t', 'Arr1Dsbsigpband_t', 'Arr1Dsbsion_t', 'Arr1Dsbslcorr_t', 'Arr1Dsbsmsg_t', 'Arr1Dsbssat_t', 'Arr1Dsbssatp_t', 'Arr1Dseph_t', 'Arr1Dshort', 'Arr1Dsnrmask_t', 'Arr1Dsol_t', 'Arr1Dsolbuf_t', 'Arr1Dsolopt_t', 'Arr1Dsolstat_t', 'Arr1Dsolstatbuf_t', 'Arr1Dssat_t', 'Arr1Dssr_t', 'Arr1Dsta_t', 'Arr1Dstrconv_t', 'Arr1Dstream_t', 'Arr1Dstrsvr_t', 'Arr1Dtec_t', 'Arr1Dtle_t', 'Arr1Dtled_t', 'Arr1Durl_t', 'Arr2Dalm_t', 'Arr2Dambc_t', 'Arr2Dchar', 'Arr2Ddgps_t', 'Arr2Ddouble', 'Arr2Deph_t', 'Arr2Derp_t', 'Arr2Derpd_t', 'Arr2Dfilopt_t', 'Arr2Dfloat', 'Arr2Dgeph_t', 'Arr2Dgis_pnt_t', 'Arr2Dgis_poly_t', 'Arr2Dgis_polygon_t', 'Arr2Dgis_t', 'Arr2Dgisd_t', 'Arr2Dgtime_t', 'Arr2Dint', 'Arr2Dlong', 'Arr2Dnav_t', 'Arr2Dobs_t', 'Arr2Dobsd_t', 'Arr2Dopt_t', 'Arr2Dpclk_t', 'Arr2Dpcv_t', 'Arr2Dpcvs_t', 'Arr2Dpeph_t', 'Arr2Dprcopt_t', 'Arr2Draw_t', 'Arr2Drnxctr_t', 'Arr2Drnxopt_t', 'Arr2Drtcm_t', 'Arr2Drtk_t', 'Arr2Drtksvr_t', 'Arr2Dsbs_t', 'Arr2Dsbsfcorr_t', 'Arr2Dsbsigp_t', 'Arr2Dsbsigpband_t', 'Arr2Dsbsion_t', 'Arr2Dsbslcorr_t', 'Arr2Dsbsmsg_t', 'Arr2Dsbssat_t', 'Arr2Dsbssatp_t', 'Arr2Dseph_t', 'Arr2Dshort', 'Arr2Dsnrmask_t', 'Arr2Dsol_t', 'Arr2Dsolbuf_t', 'Arr2Dsolopt_t', 'Arr2Dsolstat_t', 'Arr2Dsolstatbuf_t', 'Arr2Dssat_t', 'Arr2Dssr_t', 'Arr2Dsta_t', 'Arr2Dstrconv_t', 'Arr2Dstream_t', 'Arr2Dstrsvr_t', 'Arr2Dtec_t', 'Arr2Dtle_t', 'Arr2Dtled_t', 'Arr2Durl_t', 'CLIGHT', 'CODE_L1A', 'CODE_L1B', 'CODE_L1C', 'CODE_L1D', 'CODE_L1E', 'CODE_L1I', 'CODE_L1L', 'CODE_L1M', 'CODE_L1N', 'CODE_L1P', 'CODE_L1Q', 'CODE_L1S', 'CODE_L1W', 'CODE_L1X', 'CODE_L1Y', 'CODE_L1Z', 'CODE_L2C', 'CODE_L2D', 'CODE_L2I', 'CODE_L2L', 'CODE_L2M', 'CODE_L2N', 'CODE_L2P', 'CODE_L2Q', 'CODE_L2S', 'CODE_L2W', 'CODE_L2X', 'CODE_L2Y', 'CODE_L3I', 'CODE_L3Q', 'CODE_L3X', 'CODE_L4A', 'CODE_L4B', 'CODE_L4X', 'CODE_L5A', 'CODE_L5B', 'CODE_L5C', 'CODE_L5D', 'CODE_L5I', 'CODE_L5P', 'CODE_L5Q', 'CODE_L5X', 'CODE_L5Z', 'CODE_L6A', 'CODE_L6B', 'CODE_L6C', 'CODE_L6E', 'CODE_L6I', 'CODE_L6L', 'CODE_L6Q', 'CODE_L6S', 'CODE_L6X', 'CODE_L6Z', 'CODE_L7D', 'CODE_L7I', 'CODE_L7P', 'CODE_L7Q', 'CODE_L7X', 'CODE_L7Z', 'CODE_L8D', 'CODE_L8I', 'CODE_L8P', 'CODE_L8Q', 'CODE_L8X', 'CODE_L9A', 'CODE_L9B', 'CODE_L9C', 'CODE_L9X', 'CODE_NONE', 'D2R', 'DFRQ1_GLO', 'DFRQ2_GLO', 'DLOPT_FORCE', 'DLOPT_HOLDERR', 'DLOPT_HOLDLST', 'DLOPT_KEEPCMP', 'DTTOL', 'EFACT_CMP', 'EFACT_GAL', 'EFACT_GLO', 'EFACT_GPS', 'EFACT_IRN', 'EFACT_QZS', 'EFACT_SBS', 'EPHOPT_BRDC', 'EPHOPT_PREC', 'EPHOPT_SBAS', 'EPHOPT_SSRAPC', 'EPHOPT_SSRCOM', 'FE_WGS84', 'FREQ1_CMP', 'FREQ1_GLO', 'FREQ1a_GLO', 'FREQ2_CMP', 'FREQ2_GLO', 'FREQ2a_GLO', 'FREQ3_CMP', 'FREQ3_GLO', 'FREQE5ab', 'FREQE5b', 'FREQL1', 'FREQL2', 'FREQL5', 'FREQL6', 'FREQTYPE_ALL', 'FREQTYPE_L1', 'FREQTYPE_L2', 'FREQTYPE_L3', 'FREQTYPE_L4', 'FREQTYPE_L5', 'FREQs', 'GEOID_EGM2008_M10', 'GEOID_EGM2008_M25', 'GEOID_EGM96_M150', 'GEOID_EMBEDDED', 'GEOID_GSI2000_M15', 'GEOID_RAF09', 'GLO_ARMODE_AUTOCAL', 'GLO_ARMODE_FIXHOLD', 'GLO_ARMODE_OFF', 'GLO_ARMODE_ON', 'HION', 'INT_SWAP_STAT', 'INT_SWAP_TRAC', 'IONOOPT_BRDC', 'IONOOPT_EST', 'IONOOPT_IFLC', 'IONOOPT_OFF', 'IONOOPT_QZS', 'IONOOPT_SBAS', 'IONOOPT_STEC', 'IONOOPT_TEC', 'LLI_BOCTRK', 'LLI_HALFA', 'LLI_HALFC', 'LLI_HALFS', 'LLI_SLIP', 'MAXANT', 'MAXBAND', 'MAXCODE', 'MAXCOMMENT', 'MAXDTOE', 'MAXDTOE_CMP', 'MAXDTOE_GAL', 'MAXDTOE_GLO', 'MAXDTOE_IRN', 'MAXDTOE_QZS', 'MAXDTOE_S', 'MAXDTOE_SBS', 'MAXERRMSG', 'MAXEXFILE', 'MAXFREQ', 'MAXGDOP', 'MAXGISLAYER', 'MAXLEAPS', 'MAXNGEO', 'MAXNIGP', 'MAXNRPOS', 'MAXOBS', 'MAXOBSBUF', 'MAXOBSTYPE', 'MAXPRNCMP', 'MAXPRNGAL', 'MAXPRNGLO', 'MAXPRNGPS', 'MAXPRNIRN', 'MAXPRNLEO', 'MAXPRNQZS', 'MAXPRNQZS_S', 'MAXPRNSBS', 'MAXRAWLEN', 'MAXRCV', 'MAXRCVCMD', 'MAXRCVFMT', 'MAXSAT', 'MAXSBSAGEF', 'MAXSBSAGEL', 'MAXSBSMSG', 'MAXSBSURA', 'MAXSOLBUF', 'MAXSOLMSG', 'MAXSOLQ', 'MAXSTA', 'MAXSTRMSG', 'MAXSTRPATH', 'MAXSTRRTK', 'MAX_CODE_BIASES', 'MAX_CODE_BIAS_FREQS', 'MINPRNCMP', 'MINPRNGAL', 'MINPRNGLO', 'MINPRNGPS', 'MINPRNIRN', 'MINPRNLEO', 'MINPRNQZS', 'MINPRNQZS_S', 'MINPRNSBS', 'NEXOBS', 'NFREQ', 'NFREQGLO', 'NSATCMP', 'NSATGAL', 'NSATGLO', 'NSATGPS', 'NSATIRN', 'NSATLEO', 'NSATQZS', 'NSATSBS', 'NSYS', 'NSYSCMP', 'NSYSGAL', 'NSYSGLO', 'NSYSGPS', 'NSYSIRN', 'NSYSLEO', 'NSYSQZS', 'NULL', 'OBSTYPE_ALL', 'OBSTYPE_CP', 'OBSTYPE_DOP', 'OBSTYPE_PR', 'OBSTYPE_SNR', 'OMGE', 'P2_11', 'P2_15', 'P2_17', 'P2_19', 'P2_20', 'P2_21', 'P2_23', 'P2_24', 'P2_27', 'P2_29', 'P2_30', 'P2_31', 'P2_32', 'P2_33', 'P2_35', 'P2_38', 'P2_39', 'P2_40', 'P2_43', 'P2_48', 'P2_5', 'P2_50', 'P2_55', 'P2_6', 'PATCH_LEVEL', 'PI', 'PMODE_DGPS', 'PMODE_FIXED', 'PMODE_KINEMA', 'PMODE_MOVEB', 'PMODE_PPP_FIXED', 'PMODE_PPP_KINEMA', 'PMODE_PPP_STATIC', 'PMODE_SINGLE', 'PMODE_STATIC', 'PMODE_STATIC_START', 'POSOPT_FILE', 'POSOPT_POS', 'POSOPT_RINEX', 'POSOPT_RTCM', 'POSOPT_SINGLE', 'R2D', 'RE_WGS84', 'RNX2VER', 'RNX3VER', 'SBSOPT_FCORR', 'SBSOPT_ICORR', 'SBSOPT_LCORR', 'SBSOPT_RANGE', 'SC2RAD', 'SNR_UNIT', 'SOLF_ENU', 'SOLF_GSIF', 'SOLF_LLH', 'SOLF_NMEA', 'SOLF_STAT', 'SOLF_XYZ', 'SOLMODE_COMBINED', 'SOLMODE_SINGLE_DIR', 'SOLQ_DGPS', 'SOLQ_DR', 'SOLQ_FIX', 'SOLQ_FLOAT', 'SOLQ_NONE', 'SOLQ_PPP', 'SOLQ_SBAS', 'SOLQ_SINGLE', 'SOLTYPE_BACKWARD', 'SOLTYPE_COMBINED', 'SOLTYPE_COMBINED_NORESET', 'SOLTYPE_FORWARD', 'STRFMT_BINEX', 'STRFMT_CNAV', 'STRFMT_CRES', 'STRFMT_JAVAD', 'STRFMT_NMEA', 'STRFMT_NVS', 'STRFMT_OEM4', 'STRFMT_RINEX', 'STRFMT_RNXCLK', 'STRFMT_RT17', 'STRFMT_RTCM2', 'STRFMT_RTCM3', 'STRFMT_SBAS', 'STRFMT_SBP', 'STRFMT_SEPT', 'STRFMT_SP3', 'STRFMT_STQ', 'STRFMT_TERSUS', 'STRFMT_UBX', 'STR_FILE', 'STR_FTP', 'STR_HTTP', 'STR_MEMBUF', 'STR_MODE_R', 'STR_MODE_RW', 'STR_MODE_W', 'STR_NONE', 'STR_NTRIPCAS', 'STR_NTRIPCLI', 'STR_NTRIPSVR', 'STR_SERIAL', 'STR_TCPCLI', 'STR_TCPSVR', 'STR_UDPCLI', 'STR_UDPSVR', 'SYS_ALL', 'SYS_CMP', 'SYS_GAL', 'SYS_GLO', 'SYS_GPS', 'SYS_IRN', 'SYS_LEO', 'SYS_NONE', 'SYS_QZS', 'SYS_SBS', 'TIMES_GPST', 'TIMES_JST', 'TIMES_UTC', 'TROPOPT_EST', 'TROPOPT_ESTG', 'TROPOPT_OFF', 'TROPOPT_SAAS', 'TROPOPT_SBAS', 'TSYS_CMP', 'TSYS_GAL', 'TSYS_GLO', 'TSYS_GPS', 'TSYS_IRN', 'TSYS_QZS', 'TSYS_UTC', 'VER_RTKLIB', 'addsol', 'adjgpsweek', 'alm2pos', 'alm_t', 'ambc_t', 'antmodel', 'antmodel_s', 'bdt2gpst', 'bdt2time', 'chisqr', 'closegeoid', 'code2bias_ix', 'code2freq', 'code2idx', 'code2obs', 'convgpx', 'convkml', 'convrnx', 'covecef', 'covenu', 'createdir', 'cross3', 'decode_bds_d1', 'decode_bds_d2', 'decode_frame', 'decode_gal_fnav', 'decode_gal_inav', 'decode_glostr', 'decode_irn_nav', 'decode_word', 'deg2dms', 'dgps_t', 'dl_exec', 'dl_readstas', 'dl_readurls', 'dl_test', 'dms2deg', 'dops', 'dot', 'ecef2enu', 'ecef2pos', 'eci2ecef', 'enu2ecef', 'eph2clk', 'eph2pos', 'eph_t', 'epoch2time', 'erp_t', 'erpd_t', 'execcmd', 'expath', 'eye', 'filopt_t', 'filter', 'formatstrs', 'free_raw', 'free_rnxctr', 'free_rt17', 'free_rtcm', 'freenav', 'freeobs', 'freesolbuf', 'freesolstatbuf', 'gen_nvs', 'gen_rtcm2', 'gen_rtcm3', 'gen_stq', 'gen_ubx', 'geodist', 'geoidh', 'geph2clk', 'geph2pos', 'geph_t', 'getbits', 'getbitu', 'getcodepri', 'geterp', 'getseleph', 'getsol', 'getsysopts', 'gettracelevel', 'gis_free', 'gis_pnt_t', 'gis_poly_t', 'gis_polygon_t', 'gis_read', 'gis_t', 'gisd_t', 'gpst2bdt', 'gpst2time', 'gpst2utc', 'gst2time', 'gtime_t', 'igpband1', 'igpband2', 'imat', 'init_raw', 'init_rnxctr', 'init_rt17', 'init_rtcm', 'initsolbuf', 'input_bnx', 'input_bnxf', 'input_cres', 'input_cresf', 'input_javad', 'input_javadf', 'input_nvs', 'input_nvsf', 'input_oem4', 'input_oem4f', 'input_raw', 'input_rawf', 'input_rnxctr', 'input_rt17', 'input_rt17f', 'input_rtcm2', 'input_rtcm2f', 'input_rtcm3', 'input_rtcm3f', 'input_sbf', 'input_sbff', 'input_sbp', 'input_sbpf', 'input_stq', 'input_stqf', 'input_ubx', 'input_ubxf', 'inputsol', 'ionmapf', 'ionmodel', 'ionocorr', 'ionppp', 'iontec', 'jgd2tokyo', 'lambda', 'lambda_reduction', 'lambda_search', 'loaddatump', 'loadopts', 'lsq', 'mat', 'matcpy', 'matfprint', 'matinv', 'matmul', 'matprint', 'nav_t', 'norm', 'normv3', 'obs2code', 'obs_t', 'obsd_t', 'open_rnxctr', 'opengeoid', 'opt2buf', 'opt2str', 'opt_t', 'outnmea_gga', 'outnmea_gsa', 'outnmea_gsv', 'outnmea_rmc', 'outprcopt', 'outprcopts', 'outrnxcnavh', 'outrnxgnavb', 'outrnxgnavh', 'outrnxhnavb', 'outrnxhnavh', 'outrnxinavh', 'outrnxlnavh', 'outrnxnavb', 'outrnxnavh', 'outrnxobsb', 'outrnxobsh', 'outrnxqnavh', 'outsol', 'outsolex', 'outsolexs', 'outsolhead', 'outsolheads', 'outsols', 'pclk_t', 'pcv_t', 'pcvs_t', 'peph2pos', 'peph_t', 'pntpos', 'pos2ecef', 'postpos', 'ppp_ar', 'pppnx', 'pppos', 'pppoutstat', 'prcopt_default', 'prcopt_t', 'raw_t', 'read_leaps', 'readblq', 'readdcb', 'readerp', 'readnav', 'readpcv', 'readpos', 'readrnx', 'readrnxc', 'readrnxt', 'readsap', 'readsol', 'readsolstat', 'readsolstatt', 'readsolt', 'readsp3', 'readtec', 'reppath', 'reppaths', 'resetsysopts', 'rnxctr_t', 'rnxopt_t', 'rtcm_t', 'rtk_crc16', 'rtk_crc24q', 'rtk_crc32', 'rtk_t', 'rtk_uncompress', 'rtkclosestat', 'rtkfree', 'rtkinit', 'rtkopenstat', 'rtkoutstat', 'rtkpos', 'rtksvr_t', 'rtksvrclosestr', 'rtksvrfree', 'rtksvrinit', 'rtksvrlock', 'rtksvrmark', 'rtksvropenstr', 'rtksvrostat', 'rtksvrsstat', 'rtksvrstart', 'rtksvrstop', 'rtksvrunlock', 'sat2freq', 'satantoff', 'satazel', 'satexclude', 'satid2no', 'satno', 'satno2id', 'satpos', 'satposs', 'satsys', 'savenav', 'saveopts', 'sbs_t', 'sbsdecodemsg', 'sbsfcorr_t', 'sbsigp_t', 'sbsigpband_t', 'sbsion_t', 'sbsioncorr', 'sbslcorr_t', 'sbsmsg_t', 'sbsoutmsg', 'sbsreadmsg', 'sbsreadmsgt', 'sbssat_t', 'sbssatcorr', 'sbssatp_t', 'sbstropcorr', 'sbsupdatecorr', 'screent', 'searchopt', 'searchpcv', 'seliflc', 'seph2clk', 'seph2pos', 'seph_t', 'setbits', 'setbitu', 'setcodepri', 'setseleph', 'setsysopts', 'settime', 'settspan', 'sleepms', 'smoother', 'snrmask_t', 'sol_t', 'solbuf_t', 'solopt_default', 'solopt_t', 'solstat_t', 'solstatbuf_t', 'solve', 'sortobs', 'ssat_t', 'ssr_t', 'sta_t', 'str2num', 'str2opt', 'str2time', 'strclose', 'strconv_t', 'strconvfree', 'strconvnew', 'stream_t', 'strgettime', 'strinit', 'strinitcom', 'strlock', 'stropen', 'strread', 'strsendcmd', 'strsendnmea', 'strsetdir', 'strsetopt', 'strsetproxy', 'strsettimeout', 'strstat', 'strstatx', 'strsum', 'strsvr_t', 'strsvrinit', 'strsvrstart', 'strsvrstat', 'strsvrstop', 'strsync', 'strunlock', 'strwrite', 'sunmoonpos', 'sysopts', 'tec_t', 'test_glostr', 'testsnr', 'tickget', 'tidedisp', 'time2bdt', 'time2doy', 'time2epoch', 'time2epoch_n', 'time2gpst', 'time2gst', 'time2str', 'time_str', 'timeadd', 'timediff', 'timeget', 'timereset', 'timeset', 'tle_name_read', 'tle_pos', 'tle_read', 'tle_t', 'tled_t', 'tokyo2jgd', 'traceb', 'traceclose', 'tracegnav', 'tracehnav', 'tracelevel', 'tracemat', 'tracenav', 'traceobs', 'traceopen', 'tracepclk', 'tracepeph', 'tropcorr', 'tropmapf', 'tropmodel', 'uniqnav', 'url_t', 'utc2gmst', 'utc2gpst', 'xyz2enu', 'zeros']
+__all__: list[str] = ['ARMODE_CONT', 'ARMODE_FIXHOLD', 'ARMODE_INST', 'ARMODE_OFF', 'AS2R', 'AU', 'Arr1Dalm_t', 'Arr1Dambc_t', 'Arr1Dchar', 'Arr1Ddgps_t', 'Arr1Ddouble', 'Arr1Deph_t', 'Arr1Derp_t', 'Arr1Derpd_t', 'Arr1Dfilopt_t', 'Arr1Dfloat', 'Arr1Dgeph_t', 'Arr1Dgis_pnt_t', 'Arr1Dgis_poly_t', 'Arr1Dgis_polygon_t', 'Arr1Dgis_t', 'Arr1Dgisd_t', 'Arr1Dgtime_t', 'Arr1Dint', 'Arr1Dlong', 'Arr1Dnav_t', 'Arr1Dobs_t', 'Arr1Dobsd_t', 'Arr1Dopt_t', 'Arr1Dpclk_t', 'Arr1Dpcv_t', 'Arr1Dpcvs_t', 'Arr1Dpeph_t', 'Arr1Dprcopt_t', 'Arr1Draw_t', 'Arr1Drnxctr_t', 'Arr1Drnxopt_t', 'Arr1Drtcm_t', 'Arr1Drtk_t', 'Arr1Drtksvr_t', 'Arr1Dsbs_t', 'Arr1Dsbsfcorr_t', 'Arr1Dsbsigp_t', 'Arr1Dsbsigpband_t', 'Arr1Dsbsion_t', 'Arr1Dsbslcorr_t', 'Arr1Dsbsmsg_t', 'Arr1Dsbssat_t', 'Arr1Dsbssatp_t', 'Arr1Dseph_t', 'Arr1Dshort', 'Arr1Dsnrmask_t', 'Arr1Dsol_t', 'Arr1Dsolbuf_t', 'Arr1Dsolopt_t', 'Arr1Dsolstat_t', 'Arr1Dsolstatbuf_t', 'Arr1Dssat_t', 'Arr1Dssr_t', 'Arr1Dsta_t', 'Arr1Dstrconv_t', 'Arr1Dstream_t', 'Arr1Dstrsvr_t', 'Arr1Dtec_t', 'Arr1Dtle_t', 'Arr1Dtled_t', 'Arr1Durl_t', 'Arr2Dalm_t', 'Arr2Dambc_t', 'Arr2Dchar', 'Arr2Ddgps_t', 'Arr2Ddouble', 'Arr2Deph_t', 'Arr2Derp_t', 'Arr2Derpd_t', 'Arr2Dfilopt_t', 'Arr2Dfloat', 'Arr2Dgeph_t', 'Arr2Dgis_pnt_t', 'Arr2Dgis_poly_t', 'Arr2Dgis_polygon_t', 'Arr2Dgis_t', 'Arr2Dgisd_t', 'Arr2Dgtime_t', 'Arr2Dint', 'Arr2Dlong', 'Arr2Dnav_t', 'Arr2Dobs_t', 'Arr2Dobsd_t', 'Arr2Dopt_t', 'Arr2Dpclk_t', 'Arr2Dpcv_t', 'Arr2Dpcvs_t', 'Arr2Dpeph_t', 'Arr2Dprcopt_t', 'Arr2Draw_t', 'Arr2Drnxctr_t', 'Arr2Drnxopt_t', 'Arr2Drtcm_t', 'Arr2Drtk_t', 'Arr2Drtksvr_t', 'Arr2Dsbs_t', 'Arr2Dsbsfcorr_t', 'Arr2Dsbsigp_t', 'Arr2Dsbsigpband_t', 'Arr2Dsbsion_t', 'Arr2Dsbslcorr_t', 'Arr2Dsbsmsg_t', 'Arr2Dsbssat_t', 'Arr2Dsbssatp_t', 'Arr2Dseph_t', 'Arr2Dshort', 'Arr2Dsnrmask_t', 'Arr2Dsol_t', 'Arr2Dsolbuf_t', 'Arr2Dsolopt_t', 'Arr2Dsolstat_t', 'Arr2Dsolstatbuf_t', 'Arr2Dssat_t', 'Arr2Dssr_t', 'Arr2Dsta_t', 'Arr2Dstrconv_t', 'Arr2Dstream_t', 'Arr2Dstrsvr_t', 'Arr2Dtec_t', 'Arr2Dtle_t', 'Arr2Dtled_t', 'Arr2Durl_t', 'CLIGHT', 'CODE_L1A', 'CODE_L1B', 'CODE_L1C', 'CODE_L1D', 'CODE_L1E', 'CODE_L1I', 'CODE_L1L', 'CODE_L1M', 'CODE_L1N', 'CODE_L1P', 'CODE_L1Q', 'CODE_L1S', 'CODE_L1W', 'CODE_L1X', 'CODE_L1Y', 'CODE_L1Z', 'CODE_L2C', 'CODE_L2D', 'CODE_L2I', 'CODE_L2L', 'CODE_L2M', 'CODE_L2N', 'CODE_L2P', 'CODE_L2Q', 'CODE_L2S', 'CODE_L2W', 'CODE_L2X', 'CODE_L2Y', 'CODE_L3I', 'CODE_L3Q', 'CODE_L3X', 'CODE_L4A', 'CODE_L4B', 'CODE_L4X', 'CODE_L5A', 'CODE_L5B', 'CODE_L5C', 'CODE_L5D', 'CODE_L5I', 'CODE_L5P', 'CODE_L5Q', 'CODE_L5X', 'CODE_L5Z', 'CODE_L6A', 'CODE_L6B', 'CODE_L6C', 'CODE_L6D', 'CODE_L6E', 'CODE_L6I', 'CODE_L6L', 'CODE_L6P', 'CODE_L6Q', 'CODE_L6S', 'CODE_L6X', 'CODE_L6Z', 'CODE_L7D', 'CODE_L7I', 'CODE_L7P', 'CODE_L7Q', 'CODE_L7X', 'CODE_L7Z', 'CODE_L8D', 'CODE_L8I', 'CODE_L8P', 'CODE_L8Q', 'CODE_L8X', 'CODE_L9A', 'CODE_L9B', 'CODE_L9C', 'CODE_L9X', 'CODE_NONE', 'D2R', 'DFRQ1_GLO', 'DFRQ2_GLO', 'DLOPT_FORCE', 'DLOPT_HOLDERR', 'DLOPT_HOLDLST', 'DLOPT_KEEPCMP', 'DTTOL', 'EFACT_CMP', 'EFACT_GAL', 'EFACT_GLO', 'EFACT_GPS', 'EFACT_IRN', 'EFACT_QZS', 'EFACT_SBS', 'EPHOPT_BRDC', 'EPHOPT_PREC', 'EPHOPT_SBAS', 'EPHOPT_SSRAPC', 'EPHOPT_SSRCOM', 'FE_WGS84', 'FREQ1_CMP', 'FREQ1_GLO', 'FREQ1a_GLO', 'FREQ2_CMP', 'FREQ2_GLO', 'FREQ2a_GLO', 'FREQ3_CMP', 'FREQ3_GLO', 'FREQE5ab', 'FREQE5b', 'FREQL1', 'FREQL2', 'FREQL5', 'FREQL6', 'FREQTYPE_ALL', 'FREQTYPE_L1', 'FREQTYPE_L2', 'FREQTYPE_L3', 'FREQTYPE_L4', 'FREQTYPE_L5', 'FREQTYPE_L6', 'FREQs', 'FileWrapper', 'GEOID_EGM2008_M10', 'GEOID_EGM2008_M25', 'GEOID_EGM96_M150', 'GEOID_EMBEDDED', 'GEOID_GSI2000_M15', 'GEOID_RAF09', 'GLO_ARMODE_AUTOCAL', 'GLO_ARMODE_FIXHOLD', 'GLO_ARMODE_OFF', 'GLO_ARMODE_ON', 'HION', 'INT_SWAP_STAT', 'INT_SWAP_TRAC', 'IONOOPT_BRDC', 'IONOOPT_EST', 'IONOOPT_IFLC', 'IONOOPT_OFF', 'IONOOPT_QZS', 'IONOOPT_SBAS', 'IONOOPT_TEC', 'LLI_BOCTRK', 'LLI_HALFA', 'LLI_HALFC', 'LLI_HALFS', 'LLI_SLIP', 'MAXANT', 'MAXBAND', 'MAXCODE', 'MAXCOMMENT', 'MAXDTOE', 'MAXDTOE_CMP', 'MAXDTOE_GAL', 'MAXDTOE_GLO', 'MAXDTOE_IRN', 'MAXDTOE_QZS', 'MAXDTOE_S', 'MAXDTOE_SBS', 'MAXERRMSG', 'MAXEXFILE', 'MAXFREQ', 'MAXGDOP', 'MAXGISLAYER', 'MAXLEAPS', 'MAXNGEO', 'MAXNIGP', 'MAXNRPOS', 'MAXOBS', 'MAXOBSBUF', 'MAXOBSTYPE', 'MAXPRNCMP', 'MAXPRNGAL', 'MAXPRNGLO', 'MAXPRNGPS', 'MAXPRNIRN', 'MAXPRNLEO', 'MAXPRNQZS', 'MAXPRNQZS_S', 'MAXPRNSBS', 'MAXRAWLEN', 'MAXRCV', 'MAXRCVCMD', 'MAXRCVFMT', 'MAXSAT', 'MAXSBSAGEF', 'MAXSBSAGEL', 'MAXSBSMSG', 'MAXSBSURA', 'MAXSOLBUF', 'MAXSOLLEN', 'MAXSOLMSG', 'MAXSOLQ', 'MAXSTA', 'MAXSTRMSG', 'MAXSTRPATH', 'MAXSTRRTK', 'MAX_CODE_BIASES', 'MAX_CODE_BIAS_FREQS', 'MINPRNCMP', 'MINPRNGAL', 'MINPRNGLO', 'MINPRNGPS', 'MINPRNIRN', 'MINPRNLEO', 'MINPRNQZS', 'MINPRNQZS_S', 'MINPRNSBS', 'NEXOBS', 'NFREQ', 'NFREQGLO', 'NSATCMP', 'NSATGAL', 'NSATGLO', 'NSATGPS', 'NSATIRN', 'NSATLEO', 'NSATQZS', 'NSATSBS', 'NSYS', 'NSYSCMP', 'NSYSGAL', 'NSYSGLO', 'NSYSGPS', 'NSYSIRN', 'NSYSLEO', 'NSYSQZS', 'OBSTYPE_ALL', 'OBSTYPE_CP', 'OBSTYPE_DOP', 'OBSTYPE_PR', 'OBSTYPE_SNR', 'OMGE', 'P2_11', 'P2_15', 'P2_17', 'P2_19', 'P2_20', 'P2_21', 'P2_23', 'P2_24', 'P2_27', 'P2_29', 'P2_30', 'P2_31', 'P2_32', 'P2_33', 'P2_35', 'P2_38', 'P2_39', 'P2_40', 'P2_43', 'P2_48', 'P2_5', 'P2_50', 'P2_55', 'P2_6', 'PATCH_LEVEL', 'PI', 'PMODE_DGPS', 'PMODE_FIXED', 'PMODE_KINEMA', 'PMODE_MOVEB', 'PMODE_PPP_FIXED', 'PMODE_PPP_KINEMA', 'PMODE_PPP_STATIC', 'PMODE_SINGLE', 'PMODE_STATIC', 'PMODE_STATIC_START', 'POSOPT_FILE', 'POSOPT_POS_LLH', 'POSOPT_POS_XYZ', 'POSOPT_RINEX', 'POSOPT_RTCM', 'POSOPT_SINGLE', 'R2D', 'RE_WGS84', 'RNX2VER', 'RNX3VER', 'RNX_NUMSYS', 'RNX_SYS_CMP', 'RNX_SYS_GAL', 'RNX_SYS_GLO', 'RNX_SYS_GPS', 'RNX_SYS_IRN', 'RNX_SYS_QZS', 'RNX_SYS_SBS', 'SBSOPT_FCORR', 'SBSOPT_ICORR', 'SBSOPT_LCORR', 'SBSOPT_RANGE', 'SC2RAD', 'SOLF_ENU', 'SOLF_GSIF', 'SOLF_LLH', 'SOLF_NMEA', 'SOLF_STAT', 'SOLF_XYZ', 'SOLMODE_COMBINED', 'SOLMODE_SINGLE_DIR', 'SOLQ_DGPS', 'SOLQ_DR', 'SOLQ_FIX', 'SOLQ_FLOAT', 'SOLQ_NONE', 'SOLQ_PPP', 'SOLQ_SBAS', 'SOLQ_SINGLE', 'SOLTYPE_BACKWARD', 'SOLTYPE_COMBINED', 'SOLTYPE_COMBINED_NORESET', 'SOLTYPE_FORWARD', 'STRFMT_BINEX', 'STRFMT_CRES', 'STRFMT_JAVAD', 'STRFMT_NMEA', 'STRFMT_NVS', 'STRFMT_OEM4', 'STRFMT_RINEX', 'STRFMT_RNXCLK', 'STRFMT_RT17', 'STRFMT_RTCM2', 'STRFMT_RTCM3', 'STRFMT_SBAS', 'STRFMT_SBP', 'STRFMT_SEPT', 'STRFMT_SP3', 'STRFMT_STQ', 'STRFMT_UBX', 'STRFMT_UNICORE', 'STR_FILE', 'STR_FTP', 'STR_HTTP', 'STR_MEMBUF', 'STR_MODE_R', 'STR_MODE_RW', 'STR_MODE_W', 'STR_NONE', 'STR_NTRIPCAS', 'STR_NTRIPCLI', 'STR_NTRIPSVR', 'STR_SERIAL', 'STR_TCPCLI', 'STR_TCPSVR', 'STR_UDPCLI', 'STR_UDPSVR', 'SYS_ALL', 'SYS_CMP', 'SYS_GAL', 'SYS_GLO', 'SYS_GPS', 'SYS_IRN', 'SYS_LEO', 'SYS_NONE', 'SYS_QZS', 'SYS_SBS', 'TIMES_GPST', 'TIMES_JST', 'TIMES_UTC', 'TROPOPT_EST', 'TROPOPT_ESTG', 'TROPOPT_OFF', 'TROPOPT_SAAS', 'TROPOPT_SBAS', 'TSYS_CMP', 'TSYS_GAL', 'TSYS_GLO', 'TSYS_GPS', 'TSYS_IRN', 'TSYS_QZS', 'TSYS_UTC', 'VER_RTKLIB', 'addsol', 'adjgpsweek', 'alm2pos', 'alm_t', 'ambc_t', 'antmodel', 'antmodel_s', 'bdt2gpst', 'bdt2time', 'chisqr', 'closegeoid', 'code2bias_ix', 'code2freq', 'code2idx', 'code2obs', 'convgpx', 'convkml', 'convrnx', 'covecef', 'covenu', 'createdir', 'cross3', 'decode_bds_d1', 'decode_bds_d2', 'decode_frame', 'decode_gal_fnav', 'decode_gal_inav', 'decode_glostr', 'decode_irn_nav', 'decode_word', 'deg2dms', 'dgps_t', 'dl_exec', 'dl_readstas', 'dl_readurls', 'dl_test', 'dms2deg', 'dops', 'dot', 'dot2', 'dot3', 'ecef2enu', 'ecef2pos', 'eci2ecef', 'enu2ecef', 'eph2clk', 'eph2pos', 'eph_t', 'epoch2time', 'erp_t', 'erpd_t', 'execcmd', 'expath', 'eye', 'filopt_t', 'filter', 'formatstrs', 'free_pcvs', 'free_raw', 'free_rnxctr', 'free_rt17', 'free_rtcm', 'free_sbf', 'freenav', 'freeobs', 'freesolbuf', 'freesolstatbuf', 'gen_nvs', 'gen_rtcm2', 'gen_rtcm3', 'gen_stq', 'gen_ubx', 'geodist', 'geoidh', 'geph2clk', 'geph2pos', 'geph_t', 'getbits', 'getbitu', 'getcodepri', 'geterp', 'getseleph', 'getsol', 'getstapos', 'getsysopts', 'gettracelevel', 'gis_free', 'gis_pnt_t', 'gis_poly_t', 'gis_polygon_t', 'gis_read', 'gis_t', 'gisd_t', 'gpst2bdt', 'gpst2time', 'gpst2utc', 'gst2time', 'gtime_t', 'igpband1', 'igpband2', 'imat', 'init_raw', 'init_rnxctr', 'init_rt17', 'init_rtcm', 'init_sbf', 'initsolbuf', 'input_bnx', 'input_bnxf', 'input_cres', 'input_cresf', 'input_javad', 'input_javadf', 'input_nvs', 'input_nvsf', 'input_oem4', 'input_oem4f', 'input_raw', 'input_rawf', 'input_rnxctr', 'input_rt17', 'input_rt17f', 'input_rtcm2', 'input_rtcm2f', 'input_rtcm3', 'input_rtcm3f', 'input_sbf', 'input_sbff', 'input_sbp', 'input_sbpf', 'input_stq', 'input_stqf', 'input_ubx', 'input_ubxf', 'input_unicore', 'input_unicoref', 'inputsol', 'ionmapf', 'ionmodel', 'ionocorr', 'ionppp', 'iontec', 'jgd2tokyo', 'lambda', 'lambda_reduction', 'lambda_search', 'loaddatump', 'loadopts', 'lsq', 'mat', 'matcpy', 'matfprint', 'matinv', 'matmul', 'matmulm', 'matmulp', 'matprint', 'nav_t', 'norm', 'normv3', 'obs2code', 'obs_t', 'obsd_t', 'open_rnxctr', 'opengeoid', 'opt2buf', 'opt2str', 'opt_t', 'outnmea_gga', 'outnmea_gsa', 'outnmea_gsv', 'outnmea_rmc', 'outprcopt', 'outprcopts', 'outrnxcnavh', 'outrnxgnavb', 'outrnxgnavh', 'outrnxhnavb', 'outrnxhnavh', 'outrnxinavh', 'outrnxlnavh', 'outrnxnavb', 'outrnxnavh', 'outrnxobsb', 'outrnxobsh', 'outrnxqnavh', 'outsol', 'outsolex', 'outsolexs', 'outsolhead', 'outsolheads', 'outsols', 'pclk_t', 'pcv_t', 'pcvs_t', 'peph2pos', 'peph_t', 'pntpos', 'pos2ecef', 'postpos', 'ppp_ar', 'pppnx', 'pppos', 'pppoutstat', 'prcopt_default', 'prcopt_t', 'raw_t', 'read_leaps', 'readblq', 'readdcb', 'readerp', 'readnav', 'readpcv', 'readpos', 'readrnx', 'readrnxc', 'readrnxt', 'readsap', 'readsol', 'readsolstat', 'readsolstatt', 'readsolt', 'readsp3', 'readtec', 'reppath', 'reppaths', 'resetsysopts', 'rnxctr_t', 'rnxopt_t', 'rtcm_t', 'rtk_crc16', 'rtk_crc24q', 'rtk_crc32', 'rtk_t', 'rtk_uncompress', 'rtkclosestat', 'rtkfree', 'rtkinit', 'rtkopenstat', 'rtkoutstat', 'rtkpos', 'rtksvr_t', 'rtksvrclosestr', 'rtksvrfree', 'rtksvrinit', 'rtksvrlock', 'rtksvrmark', 'rtksvropenstr', 'rtksvrostat', 'rtksvrsstat', 'rtksvrstart', 'rtksvrstop', 'rtksvrunlock', 'sat2freq', 'satantoff', 'satazel', 'satexclude', 'satid2no', 'satno', 'satno2id', 'satpos', 'satposs', 'satsys', 'savenav', 'saveopts', 'sbs_t', 'sbsdecodemsg', 'sbsfcorr_t', 'sbsigp_t', 'sbsigpband_t', 'sbsion_t', 'sbsioncorr', 'sbslcorr_t', 'sbsmsg_t', 'sbsoutmsg', 'sbsreadmsg', 'sbsreadmsgt', 'sbssat_t', 'sbssatcorr', 'sbssatp_t', 'sbstropcorr', 'sbsupdatecorr', 'screent', 'searchopt', 'searchpcv', 'seliflc', 'seph2clk', 'seph2pos', 'seph_t', 'setbits', 'setbitu', 'setcodepri', 'setseleph', 'setstr', 'setsysopts', 'settime', 'settspan', 'sleepms', 'smoother', 'snrmask_t', 'sol_t', 'solbuf_t', 'solopt_default', 'solopt_t', 'solstat_t', 'solstatbuf_t', 'solve', 'sortobs', 'ssat_t', 'ssr_t', 'sta_t', 'str2num', 'str2opt', 'str2time', 'strclose', 'strconv_t', 'strconvfree', 'strconvnew', 'stream_t', 'strgettime', 'strinit', 'strinitcom', 'strlock', 'stropen', 'strread', 'strsendcmd', 'strsendnmea', 'strsetdir', 'strsetopt', 'strsetproxy', 'strsettimeout', 'strstat', 'strstatx', 'strsum', 'strsvr_t', 'strsvrinit', 'strsvrstart', 'strsvrstat', 'strsvrstop', 'strsync', 'strunlock', 'strwrite', 'sunmoonpos', 'sysopts', 'tec_t', 'test_glostr', 'testsnr', 'tickget', 'tidedisp', 'time2bdt', 'time2doy', 'time2epoch', 'time2epoch_n', 'time2gpst', 'time2gst', 'time2str', 'timeadd', 'timediff', 'timeget', 'timereset', 'timeset', 'tle_name_read', 'tle_pos', 'tle_read', 'tle_t', 'tled_t', 'tokyo2jgd', 'traceb_impl', 'traceclose', 'tracegnav_impl', 'tracehnav_impl', 'tracelevel', 'tracemat_impl', 'tracenav_impl', 'traceobs_impl', 'traceopen', 'tracepclk_impl', 'tracepeph_impl', 'tropcorr', 'tropmapf', 'tropmodel', 'uniqnav', 'url_t', 'utc2gmst', 'utc2gpst', 'xyz2enu', 'zeros']
 class Arr1Dalm_t:
     @typing.overload
     def __getitem__(self, arg0: int) -> alm_t:
@@ -3303,6 +3303,13 @@ class Arr2Durl_t:
     @property
     def ptr(self) -> url_t:
         ...
+class FileWrapper:
+    def __init__(self, arg0: str, arg1: str) -> None:
+        ...
+    def cleareof(self) -> None:
+        ...
+    def get(self) -> __sFILE:
+        ...
 class alm_t:
     A: float
     M0: float
@@ -3466,6 +3473,7 @@ class filopt_t:
 class geph_t:
     age: int
     dtaun: float
+    flags: int
     frq: int
     gamn: float
     iode: int
@@ -3672,16 +3680,16 @@ class obsd_t:
     def LLI(self) -> ...:
         ...
     @property
-    def Lstd(self) -> ...:
+    def Lstd(self) -> Arr1Dfloat:
         ...
     @property
     def P(self) -> Arr1Ddouble:
         ...
     @property
-    def Pstd(self) -> ...:
+    def Pstd(self) -> Arr1Dfloat:
         ...
     @property
-    def SNR(self) -> ...:
+    def SNR(self) -> Arr1Dfloat:
         ...
     @property
     def code(self) -> ...:
@@ -3967,6 +3975,7 @@ class rnxopt_t:
     phshift: int
     rnxver: int
     sep_nav: int
+    sortsats: int
     te: gtime_t
     tend: gtime_t
     tint: float
@@ -4048,6 +4057,7 @@ class rtcm_t:
     nav: nav_t
     nbit: int
     nbyte: int
+    nbyte_invalid: int
     obs: obs_t
     obsflag: int
     outtype: int
@@ -4106,6 +4116,7 @@ class rtk_t:
     excsat: int
     holdamb: str
     initial_mode: int
+    intpres_nb: int
     na: int
     nb_ar: int
     neb: int
@@ -4125,6 +4136,9 @@ class rtk_t:
     def errbuf(self) -> Arr1Dchar:
         ...
     @property
+    def intpres_obsb(self) -> Arr1Dobsd_t:
+        ...
+    @property
     def ptr(self) -> rtk_t:
         ...
     @property
@@ -4138,7 +4152,6 @@ class rtksvr_t:
     buffsize: int
     cputime: int
     cycle: int
-    lock: pthread_mutex_t
     moni: Arr1Dstream_t
     nav: nav_t
     nave: int
@@ -4147,10 +4160,10 @@ class rtksvr_t:
     nmeareq: int
     nsbs: int
     nsol: int
+    pcvsr: pcvs_t
     prcout: int
     rtk: rtk_t
     state: int
-    thread: int
     tick: int
     def __init__(self) -> None:
         ...
@@ -4365,6 +4378,7 @@ class sol_t:
     prev_ratio1: float
     prev_ratio2: float
     ratio: float
+    refstationid: int
     stat: int
     thres: float
     time: gtime_t
@@ -4448,7 +4462,7 @@ class solstat_t:
     resp: float
     sat: int
     slipc: int
-    snr: int
+    snr: float
     time: gtime_t
     def __init__(self) -> None:
         ...
@@ -4472,6 +4486,9 @@ class ssat_t:
         ...
     @property
     def azel(self) -> Arr1Ddouble:
+        ...
+    @property
+    def code(self) -> Arr2Dint:
         ...
     @property
     def fix(self) -> ...:
@@ -4519,10 +4536,10 @@ class ssat_t:
     def slipc(self) -> ...:
         ...
     @property
-    def snr_base(self) -> ...:
+    def snr_base(self) -> Arr1Dfloat:
         ...
     @property
-    def snr_rover(self) -> ...:
+    def snr_rover(self) -> Arr1Dfloat:
         ...
     @property
     def vsat(self) -> ...:
@@ -4577,22 +4594,28 @@ class sta_t:
     def __init__(self) -> None:
         ...
     @property
+    def agency(self) -> Arr1Dchar:
+        ...
+    @property
     def antdes(self) -> Arr1Dchar:
         ...
     @property
     def antsno(self) -> Arr1Dchar:
         ...
     @property
-    def del(self) -> Arr1Ddouble:
-        ...
-    @property
     def glo_cp_bias(self) -> Arr1Ddouble:
         ...
     @property
-    def marker(self) -> Arr1Dchar:
+    def markerno(self) -> Arr1Dchar:
+        ...
+    @property
+    def markertype(self) -> Arr1Dchar:
         ...
     @property
     def name(self) -> Arr1Dchar:
+        ...
+    @property
+    def observer(self) -> Arr1Dchar:
         ...
     @property
     def pos(self) -> Arr1Ddouble:
@@ -4638,7 +4661,6 @@ class stream_t:
     inb: int
     inbt: int
     inr: int
-    lock: pthread_mutex_t
     mode: int
     outb: int
     outbt: int
@@ -4664,14 +4686,12 @@ class strsvr_t:
     buff: ...
     buffsize: int
     cycle: int
-    lock: pthread_mutex_t
     nmeacycle: int
     npb: int
     nstr: int
     pbuf: ...
     relayback: int
     state: int
-    thread: int
     tick: int
     def __init__(self) -> None:
         ...
@@ -4856,7 +4876,7 @@ def decode_bds_d2(arg0: ..., arg1: eph_t, arg2: Arr1Ddouble) -> int:
     """
     rtklib decode_bds_d2
     """
-def decode_frame(arg0: ..., arg1: eph_t, arg2: alm_t, arg3: Arr1Ddouble, arg4: Arr1Ddouble) -> int:
+def decode_frame(arg0: ..., arg1: int, arg2: eph_t, arg3: alm_t, arg4: Arr1Ddouble, arg5: Arr1Ddouble) -> int:
     """
     rtklib decode_frame
     """
@@ -4884,7 +4904,7 @@ def deg2dms(arg0: float, arg1: Arr1Ddouble, arg2: int) -> None:
     """
     rtklib deg2dms
     """
-def dl_exec(arg0: gtime_t, arg1: gtime_t, arg2: float, arg3: int, arg4: int, arg5: url_t, arg6: int, arg7: list[str], arg8: int, arg9: str, arg10: str, arg11: str, arg12: str, arg13: int, arg14: Arr1Dchar, arg15: str, arg16: str) -> int:
+def dl_exec(arg0: gtime_t, arg1: gtime_t, arg2: float, arg3: int, arg4: int, arg5: url_t, arg6: int, arg7: list[str], arg8: int, arg9: str, arg10: str, arg11: str, arg12: str, arg13: int, arg14: Arr1Dchar, arg15: FileWrapper) -> int:
     """
     rtklib dl_exec
     """
@@ -4896,7 +4916,7 @@ def dl_readurls(arg0: str, arg1: list[str], arg2: int, arg3: url_t, arg4: int) -
     """
     rtklib dl_readurls
     """
-def dl_test(arg0: gtime_t, arg1: gtime_t, arg2: float, arg3: url_t, arg4: int, arg5: list[str], arg6: int, arg7: str, arg8: int, arg9: int, arg10: str, arg11: str) -> None:
+def dl_test(arg0: gtime_t, arg1: gtime_t, arg2: float, arg3: url_t, arg4: int, arg5: list[str], arg6: int, arg7: str, arg8: int, arg9: int, arg10: FileWrapper) -> None:
     """
     rtklib dl_test
     """
@@ -4911,6 +4931,14 @@ def dops(arg0: int, arg1: Arr1Ddouble, arg2: float, arg3: Arr1Ddouble) -> None:
 def dot(arg0: Arr1Ddouble, arg1: Arr1Ddouble, arg2: int) -> float:
     """
     rtklib dot
+    """
+def dot2(arg0: Arr1Ddouble, arg1: Arr1Ddouble) -> float:
+    """
+    rtklib dot2
+    """
+def dot3(arg0: Arr1Ddouble, arg1: Arr1Ddouble) -> float:
+    """
+    rtklib dot3
     """
 def ecef2enu(arg0: Arr1Ddouble, arg1: Arr1Ddouble, arg2: Arr1Ddouble) -> None:
     """
@@ -4956,6 +4984,10 @@ def filter(arg0: Arr1Ddouble, arg1: Arr1Ddouble, arg2: Arr1Ddouble, arg3: Arr1Dd
     """
     rtklib filter
     """
+def free_pcvs(arg0: pcvs_t) -> None:
+    """
+    rtklib free_pcvs
+    """
 def free_raw(arg0: raw_t) -> None:
     """
     rtklib free_raw
@@ -4971,6 +5003,10 @@ def free_rt17(arg0: raw_t) -> None:
 def free_rtcm(arg0: rtcm_t) -> None:
     """
     rtklib free_rtcm
+    """
+def free_sbf(arg0: raw_t) -> None:
+    """
+    rtklib free_sbf
     """
 def freenav(arg0: nav_t, arg1: int) -> None:
     """
@@ -5048,6 +5084,10 @@ def getsol(arg0: solbuf_t, arg1: int) -> sol_t:
     """
     rtklib getsol
     """
+def getstapos(arg0: str, arg1: str, arg2: Arr1Ddouble) -> int:
+    """
+    rtklib getstapos
+    """
 def getsysopts(arg0: prcopt_t, arg1: solopt_t, arg2: filopt_t) -> None:
     """
     rtklib getsysopts
@@ -5100,6 +5140,10 @@ def init_rtcm(arg0: rtcm_t) -> int:
     """
     rtklib init_rtcm
     """
+def init_sbf(arg0: raw_t) -> int:
+    """
+    rtklib init_sbf
+    """
 def initsolbuf(arg0: solbuf_t, arg1: int, arg2: int) -> None:
     """
     rtklib initsolbuf
@@ -5108,7 +5152,7 @@ def input_bnx(arg0: raw_t, arg1: int) -> int:
     """
     rtklib input_bnx
     """
-def input_bnxf(arg0: raw_t, arg1: str, arg2: str) -> int:
+def input_bnxf(arg0: raw_t, arg1: FileWrapper) -> int:
     """
     rtklib input_bnxf
     """
@@ -5116,7 +5160,7 @@ def input_cres(arg0: raw_t, arg1: int) -> int:
     """
     rtklib input_cres
     """
-def input_cresf(arg0: raw_t, arg1: str, arg2: str) -> int:
+def input_cresf(arg0: raw_t, arg1: FileWrapper) -> int:
     """
     rtklib input_cresf
     """
@@ -5124,7 +5168,7 @@ def input_javad(arg0: raw_t, arg1: int) -> int:
     """
     rtklib input_javad
     """
-def input_javadf(arg0: raw_t, arg1: str, arg2: str) -> int:
+def input_javadf(arg0: raw_t, arg1: FileWrapper) -> int:
     """
     rtklib input_javadf
     """
@@ -5132,7 +5176,7 @@ def input_nvs(arg0: raw_t, arg1: int) -> int:
     """
     rtklib input_nvs
     """
-def input_nvsf(arg0: raw_t, arg1: str, arg2: str) -> int:
+def input_nvsf(arg0: raw_t, arg1: FileWrapper) -> int:
     """
     rtklib input_nvsf
     """
@@ -5140,7 +5184,7 @@ def input_oem4(arg0: raw_t, arg1: int) -> int:
     """
     rtklib input_oem4
     """
-def input_oem4f(arg0: raw_t, arg1: str, arg2: str) -> int:
+def input_oem4f(arg0: raw_t, arg1: FileWrapper) -> int:
     """
     rtklib input_oem4f
     """
@@ -5148,11 +5192,11 @@ def input_raw(arg0: raw_t, arg1: int, arg2: int) -> int:
     """
     rtklib input_raw
     """
-def input_rawf(arg0: raw_t, arg1: int, arg2: str, arg3: str) -> int:
+def input_rawf(arg0: raw_t, arg1: int, arg2: FileWrapper) -> int:
     """
     rtklib input_rawf
     """
-def input_rnxctr(arg0: rnxctr_t, arg1: str, arg2: str) -> int:
+def input_rnxctr(arg0: rnxctr_t, arg1: FileWrapper) -> int:
     """
     rtklib input_rnxctr
     """
@@ -5160,7 +5204,7 @@ def input_rt17(arg0: raw_t, arg1: int) -> int:
     """
     rtklib input_rt17
     """
-def input_rt17f(arg0: raw_t, arg1: str, arg2: str) -> int:
+def input_rt17f(arg0: raw_t, arg1: FileWrapper) -> int:
     """
     rtklib input_rt17f
     """
@@ -5168,7 +5212,7 @@ def input_rtcm2(arg0: rtcm_t, arg1: int) -> int:
     """
     rtklib input_rtcm2
     """
-def input_rtcm2f(arg0: rtcm_t, arg1: str, arg2: str) -> int:
+def input_rtcm2f(arg0: rtcm_t, arg1: FileWrapper) -> int:
     """
     rtklib input_rtcm2f
     """
@@ -5176,7 +5220,7 @@ def input_rtcm3(arg0: rtcm_t, arg1: int) -> int:
     """
     rtklib input_rtcm3
     """
-def input_rtcm3f(arg0: rtcm_t, arg1: str, arg2: str) -> int:
+def input_rtcm3f(arg0: rtcm_t, arg1: FileWrapper) -> int:
     """
     rtklib input_rtcm3f
     """
@@ -5184,7 +5228,7 @@ def input_sbf(arg0: raw_t, arg1: int) -> int:
     """
     rtklib input_sbf
     """
-def input_sbff(arg0: raw_t, arg1: str, arg2: str) -> int:
+def input_sbff(arg0: raw_t, arg1: FileWrapper) -> int:
     """
     rtklib input_sbff
     """
@@ -5192,7 +5236,7 @@ def input_sbp(arg0: raw_t, arg1: int) -> int:
     """
     rtklib input_sbp
     """
-def input_sbpf(arg0: raw_t, arg1: str, arg2: str) -> int:
+def input_sbpf(arg0: raw_t, arg1: FileWrapper) -> int:
     """
     rtklib input_sbpf
     """
@@ -5200,7 +5244,7 @@ def input_stq(arg0: raw_t, arg1: int) -> int:
     """
     rtklib input_stq
     """
-def input_stqf(arg0: raw_t, arg1: str, arg2: str) -> int:
+def input_stqf(arg0: raw_t, arg1: FileWrapper) -> int:
     """
     rtklib input_stqf
     """
@@ -5208,9 +5252,17 @@ def input_ubx(arg0: raw_t, arg1: int) -> int:
     """
     rtklib input_ubx
     """
-def input_ubxf(arg0: raw_t, arg1: str, arg2: str) -> int:
+def input_ubxf(arg0: raw_t, arg1: FileWrapper) -> int:
     """
     rtklib input_ubxf
+    """
+def input_unicore(arg0: raw_t, arg1: int) -> int:
+    """
+    rtklib input_unicore
+    """
+def input_unicoref(arg0: raw_t, arg1: FileWrapper) -> int:
+    """
+    rtklib input_unicoref
     """
 def inputsol(arg0: int, arg1: gtime_t, arg2: gtime_t, arg3: float, arg4: int, arg5: solopt_t, arg6: solbuf_t) -> int:
     """
@@ -5240,10 +5292,6 @@ def jgd2tokyo(arg0: Arr1Ddouble) -> int:
     """
     rtklib jgd2tokyo
     """
-def lambda(arg0: int, arg1: int, arg2: Arr1Ddouble, arg3: Arr1Ddouble, arg4: Arr1Ddouble, arg5: Arr1Ddouble) -> int:
-    """
-    rtklib lambda
-    """
 def lambda_reduction(arg0: int, arg1: Arr1Ddouble, arg2: Arr1Ddouble) -> int:
     """
     rtklib lambda_reduction
@@ -5272,7 +5320,7 @@ def matcpy(arg0: Arr1Ddouble, arg1: Arr1Ddouble, arg2: int, arg3: int) -> None:
     """
     rtklib matcpy
     """
-def matfprint(arg0: Arr1Ddouble, arg1: int, arg2: int, arg3: int, arg4: int, arg5: str, arg6: str) -> None:
+def matfprint(arg0: Arr1Ddouble, arg1: int, arg2: int, arg3: int, arg4: int, arg5: FileWrapper) -> None:
     """
     rtklib matfprint
     """
@@ -5280,9 +5328,17 @@ def matinv(arg0: Arr1Ddouble, arg1: int) -> int:
     """
     rtklib matinv
     """
-def matmul(arg0: str, arg1: int, arg2: int, arg3: int, arg4: float, arg5: Arr1Ddouble, arg6: Arr1Ddouble, arg7: float, arg8: Arr1Ddouble) -> None:
+def matmul(arg0: str, arg1: int, arg2: int, arg3: int, arg4: Arr1Ddouble, arg5: Arr1Ddouble, arg6: Arr1Ddouble) -> None:
     """
     rtklib matmul
+    """
+def matmulm(arg0: str, arg1: int, arg2: int, arg3: int, arg4: Arr1Ddouble, arg5: Arr1Ddouble, arg6: Arr1Ddouble) -> None:
+    """
+    rtklib matmulm
+    """
+def matmulp(arg0: str, arg1: int, arg2: int, arg3: int, arg4: Arr1Ddouble, arg5: Arr1Ddouble, arg6: Arr1Ddouble) -> None:
+    """
+    rtklib matmulp
     """
 def matprint(arg0: Arr1Ddouble, arg1: int, arg2: int, arg3: int, arg4: int) -> None:
     """
@@ -5300,7 +5356,7 @@ def obs2code(arg0: str) -> int:
     """
     rtklib obs2code
     """
-def open_rnxctr(arg0: rnxctr_t, arg1: str, arg2: str) -> int:
+def open_rnxctr(arg0: rnxctr_t, arg1: FileWrapper) -> int:
     """
     rtklib open_rnxctr
     """
@@ -5332,7 +5388,7 @@ def outnmea_rmc(arg0: ..., arg1: sol_t) -> int:
     """
     rtklib outnmea_rmc
     """
-def outprcopt(arg0: str, arg1: str, arg2: prcopt_t) -> None:
+def outprcopt(arg0: FileWrapper, arg1: prcopt_t) -> None:
     """
     rtklib outprcopt
     """
@@ -5340,59 +5396,59 @@ def outprcopts(arg0: ..., arg1: prcopt_t) -> int:
     """
     rtklib outprcopts
     """
-def outrnxcnavh(arg0: str, arg1: str, arg2: rnxopt_t, arg3: nav_t) -> int:
+def outrnxcnavh(arg0: FileWrapper, arg1: rnxopt_t, arg2: nav_t) -> int:
     """
     rtklib outrnxcnavh
     """
-def outrnxgnavb(arg0: str, arg1: str, arg2: rnxopt_t, arg3: geph_t) -> int:
+def outrnxgnavb(arg0: FileWrapper, arg1: rnxopt_t, arg2: geph_t) -> int:
     """
     rtklib outrnxgnavb
     """
-def outrnxgnavh(arg0: str, arg1: str, arg2: rnxopt_t, arg3: nav_t) -> int:
+def outrnxgnavh(arg0: FileWrapper, arg1: rnxopt_t, arg2: nav_t) -> int:
     """
     rtklib outrnxgnavh
     """
-def outrnxhnavb(arg0: str, arg1: str, arg2: rnxopt_t, arg3: seph_t) -> int:
+def outrnxhnavb(arg0: FileWrapper, arg1: rnxopt_t, arg2: seph_t) -> int:
     """
     rtklib outrnxhnavb
     """
-def outrnxhnavh(arg0: str, arg1: str, arg2: rnxopt_t, arg3: nav_t) -> int:
+def outrnxhnavh(arg0: FileWrapper, arg1: rnxopt_t, arg2: nav_t) -> int:
     """
     rtklib outrnxhnavh
     """
-def outrnxinavh(arg0: str, arg1: str, arg2: rnxopt_t, arg3: nav_t) -> int:
+def outrnxinavh(arg0: FileWrapper, arg1: rnxopt_t, arg2: nav_t) -> int:
     """
     rtklib outrnxinavh
     """
-def outrnxlnavh(arg0: str, arg1: str, arg2: rnxopt_t, arg3: nav_t) -> int:
+def outrnxlnavh(arg0: FileWrapper, arg1: rnxopt_t, arg2: nav_t) -> int:
     """
     rtklib outrnxlnavh
     """
-def outrnxnavb(arg0: str, arg1: str, arg2: rnxopt_t, arg3: eph_t) -> int:
+def outrnxnavb(arg0: FileWrapper, arg1: rnxopt_t, arg2: eph_t) -> int:
     """
     rtklib outrnxnavb
     """
-def outrnxnavh(arg0: str, arg1: str, arg2: rnxopt_t, arg3: nav_t) -> int:
+def outrnxnavh(arg0: FileWrapper, arg1: rnxopt_t, arg2: nav_t) -> int:
     """
     rtklib outrnxnavh
     """
-def outrnxobsb(arg0: str, arg1: str, arg2: rnxopt_t, arg3: obsd_t, arg4: int, arg5: int) -> int:
+def outrnxobsb(arg0: FileWrapper, arg1: rnxopt_t, arg2: obsd_t, arg3: int, arg4: int) -> int:
     """
     rtklib outrnxobsb
     """
-def outrnxobsh(arg0: str, arg1: str, arg2: rnxopt_t, arg3: nav_t) -> int:
+def outrnxobsh(arg0: FileWrapper, arg1: rnxopt_t, arg2: nav_t) -> int:
     """
     rtklib outrnxobsh
     """
-def outrnxqnavh(arg0: str, arg1: str, arg2: rnxopt_t, arg3: nav_t) -> int:
+def outrnxqnavh(arg0: FileWrapper, arg1: rnxopt_t, arg2: nav_t) -> int:
     """
     rtklib outrnxqnavh
     """
-def outsol(arg0: str, arg1: str, arg2: sol_t, arg3: Arr1Ddouble, arg4: solopt_t) -> None:
+def outsol(arg0: FileWrapper, arg1: sol_t, arg2: Arr1Ddouble, arg3: solopt_t) -> None:
     """
     rtklib outsol
     """
-def outsolex(arg0: str, arg1: str, arg2: sol_t, arg3: ssat_t, arg4: solopt_t) -> None:
+def outsolex(arg0: FileWrapper, arg1: sol_t, arg2: ssat_t, arg3: solopt_t) -> None:
     """
     rtklib outsolex
     """
@@ -5400,7 +5456,7 @@ def outsolexs(arg0: ..., arg1: sol_t, arg2: ssat_t, arg3: solopt_t) -> int:
     """
     rtklib outsolexs
     """
-def outsolhead(arg0: str, arg1: str, arg2: solopt_t) -> None:
+def outsolhead(arg0: FileWrapper, arg1: solopt_t) -> None:
     """
     rtklib outsolhead
     """
@@ -5424,7 +5480,7 @@ def pos2ecef(arg0: Arr1Ddouble, arg1: Arr1Ddouble) -> None:
     """
     rtklib pos2ecef
     """
-def postpos(arg0: gtime_t, arg1: gtime_t, arg2: float, arg3: float, arg4: prcopt_t, arg5: solopt_t, arg6: filopt_t, arg7: list[str], arg8: int, arg9: Arr1Dchar, arg10: str, arg11: str) -> int:
+def postpos(arg0: gtime_t, arg1: gtime_t, arg2: float, arg3: float, arg4: prcopt_t, arg5: solopt_t, arg6: filopt_t, arg7: list[str], arg8: int, arg9: str, arg10: str, arg11: str) -> int:
     """
     rtklib postpos
     """
@@ -5556,7 +5612,7 @@ def rtkopenstat(arg0: str, arg1: int) -> int:
     """
     rtklib rtkopenstat
     """
-def rtkoutstat(arg0: rtk_t, arg1: Arr1Dchar) -> int:
+def rtkoutstat(arg0: rtk_t, arg1: int, arg2: Arr1Dchar) -> int:
     """
     rtklib rtkoutstat
     """
@@ -5584,7 +5640,7 @@ def rtksvrmark(arg0: rtksvr_t, arg1: str, arg2: str) -> int:
     """
     rtklib rtksvrmark
     """
-def rtksvropenstr(arg0: rtksvr_t, arg1: int, arg2: int, arg3: str, arg4: solopt_t) -> int:
+def rtksvropenstr(arg0: rtksvr_t, arg1: int, arg2: int, arg3: str, arg4: solopt_t, arg5: prcopt_t) -> int:
     """
     rtklib rtksvropenstr
     """
@@ -5664,7 +5720,7 @@ def sbsioncorr(arg0: gtime_t, arg1: nav_t, arg2: Arr1Ddouble, arg3: Arr1Ddouble,
     """
     rtklib sbsioncorr
     """
-def sbsoutmsg(arg0: str, arg1: str, arg2: sbsmsg_t) -> None:
+def sbsoutmsg(arg0: FileWrapper, arg1: sbsmsg_t) -> None:
     """
     rtklib sbsoutmsg
     """
@@ -5727,6 +5783,10 @@ def setcodepri(arg0: int, arg1: int, arg2: str) -> None:
 def setseleph(arg0: int, arg1: int) -> None:
     """
     rtklib setseleph
+    """
+def setstr(arg0: Arr1Dchar, arg1: str, arg2: int) -> None:
+    """
+    rtklib setstr
     """
 def setsysopts(arg0: prcopt_t, arg1: solopt_t, arg2: filopt_t) -> None:
     """
@@ -5912,13 +5972,9 @@ def time2gst(arg0: gtime_t, arg1: Arr1Dint) -> float:
     """
     rtklib time2gst
     """
-def time2str(arg0: gtime_t, arg1: Arr1Dchar, arg2: int) -> None:
+def time2str(arg0: gtime_t, arg1: str, arg2: int) -> str:
     """
     rtklib time2str
-    """
-def time_str(arg0: gtime_t, arg1: int) -> str:
-    """
-    rtklib time_str
     """
 def timeadd(arg0: gtime_t, arg1: float) -> gtime_t:
     """
@@ -5956,49 +6012,49 @@ def tokyo2jgd(arg0: Arr1Ddouble) -> int:
     """
     rtklib tokyo2jgd
     """
-def traceb(arg0: int, arg1: ..., arg2: int) -> None:
+def traceb_impl(arg0: int, arg1: ..., arg2: int) -> None:
     """
-    rtklib traceb
+    rtklib traceb_impl
     """
 def traceclose() -> None:
     """
     rtklib traceclose
     """
-def tracegnav(arg0: int, arg1: nav_t) -> None:
+def tracegnav_impl(arg0: int, arg1: nav_t) -> None:
     """
-    rtklib tracegnav
+    rtklib tracegnav_impl
     """
-def tracehnav(arg0: int, arg1: nav_t) -> None:
+def tracehnav_impl(arg0: int, arg1: nav_t) -> None:
     """
-    rtklib tracehnav
+    rtklib tracehnav_impl
     """
 def tracelevel(arg0: int) -> None:
     """
     rtklib tracelevel
     """
-def tracemat(arg0: int, arg1: Arr1Ddouble, arg2: int, arg3: int, arg4: int, arg5: int) -> None:
+def tracemat_impl(arg0: int, arg1: Arr1Ddouble, arg2: int, arg3: int, arg4: int, arg5: int) -> None:
     """
-    rtklib tracemat
+    rtklib tracemat_impl
     """
-def tracenav(arg0: int, arg1: nav_t) -> None:
+def tracenav_impl(arg0: int, arg1: nav_t) -> None:
     """
-    rtklib tracenav
+    rtklib tracenav_impl
     """
-def traceobs(arg0: int, arg1: obsd_t, arg2: int) -> None:
+def traceobs_impl(arg0: int, arg1: obsd_t, arg2: int) -> None:
     """
-    rtklib traceobs
+    rtklib traceobs_impl
     """
 def traceopen(arg0: str) -> None:
     """
     rtklib traceopen
     """
-def tracepclk(arg0: int, arg1: nav_t) -> None:
+def tracepclk_impl(arg0: int, arg1: nav_t) -> None:
     """
-    rtklib tracepclk
+    rtklib tracepclk_impl
     """
-def tracepeph(arg0: int, arg1: nav_t) -> None:
+def tracepeph_impl(arg0: int, arg1: nav_t) -> None:
     """
-    rtklib tracepeph
+    rtklib tracepeph_impl
     """
 def tropcorr(arg0: gtime_t, arg1: nav_t, arg2: Arr1Ddouble, arg3: Arr1Ddouble, arg4: int, arg5: Arr1Ddouble, arg6: Arr1Ddouble) -> int:
     """
@@ -6085,9 +6141,11 @@ CODE_L5Z: int = 59
 CODE_L6A: int = 30
 CODE_L6B: int = 31
 CODE_L6C: int = 32
+CODE_L6D: int = 69
 CODE_L6E: int = 60
 CODE_L6I: int = 42
 CODE_L6L: int = 36
+CODE_L6P: int = 70
 CODE_L6Q: int = 43
 CODE_L6S: int = 35
 CODE_L6X: int = 33
@@ -6143,12 +6201,13 @@ FREQL1: float = 1575420000.0
 FREQL2: float = 1227600000.0
 FREQL5: float = 1176450000.0
 FREQL6: float = 1278750000.0
-FREQTYPE_ALL: int = 255
+FREQTYPE_ALL: int = 63
 FREQTYPE_L1: int = 1
 FREQTYPE_L2: int = 2
 FREQTYPE_L3: int = 4
 FREQTYPE_L4: int = 8
 FREQTYPE_L5: int = 16
+FREQTYPE_L6: int = 32
 FREQs: float = 2492028000.0
 GEOID_EGM2008_M10: int = 3
 GEOID_EGM2008_M25: int = 2
@@ -6169,7 +6228,6 @@ IONOOPT_IFLC: int = 3
 IONOOPT_OFF: int = 0
 IONOOPT_QZS: int = 6
 IONOOPT_SBAS: int = 2
-IONOOPT_STEC: int = 8
 IONOOPT_TEC: int = 5
 LLI_BOCTRK: int = 4
 LLI_HALFA: int = 64
@@ -6178,7 +6236,7 @@ LLI_HALFS: int = 128
 LLI_SLIP: int = 1
 MAXANT: int = 64
 MAXBAND: int = 10
-MAXCODE: int = 68
+MAXCODE: int = 70
 MAXCOMMENT: int = 100
 MAXDTOE: float = 7200.0
 MAXDTOE_CMP: float = 21600.0
@@ -6212,14 +6270,15 @@ MAXPRNSBS: int = 158
 MAXRAWLEN: int = 16384
 MAXRCV: int = 64
 MAXRCVCMD: int = 4096
-MAXRCVFMT: int = 13
+MAXRCVFMT: int = 14
 MAXSAT: int = 204
 MAXSBSAGEF: float = 30.0
 MAXSBSAGEL: float = 1800.0
 MAXSBSMSG: int = 32
 MAXSBSURA: int = 8
 MAXSOLBUF: int = 256
-MAXSOLMSG: int = 8191
+MAXSOLLEN: int = 512
+MAXSOLMSG: int = 32768
 MAXSOLQ: int = 7
 MAXSTA: int = 255
 MAXSTRMSG: int = 1024
@@ -6255,8 +6314,7 @@ NSYSGPS: int = 1
 NSYSIRN: int = 1
 NSYSLEO: int = 0
 NSYSQZS: int = 1
-NULL: int = 0
-OBSTYPE_ALL: int = 255
+OBSTYPE_ALL: int = 15
 OBSTYPE_CP: int = 2
 OBSTYPE_DOP: int = 4
 OBSTYPE_PR: int = 1
@@ -6286,7 +6344,7 @@ P2_5: float = 0.03125
 P2_50: float = 8.881784197001252e-16
 P2_55: float = 2.775557561562891e-17
 P2_6: float = 0.015625
-PATCH_LEVEL: str = 'b34h'
+PATCH_LEVEL: str = '2.5.0'
 PI: float = 3.141592653589793
 PMODE_DGPS: int = 1
 PMODE_FIXED: int = 6
@@ -6298,21 +6356,29 @@ PMODE_PPP_STATIC: int = 8
 PMODE_SINGLE: int = 0
 PMODE_STATIC: int = 3
 PMODE_STATIC_START: int = 4
-POSOPT_FILE: int = 2
-POSOPT_POS: int = 0
-POSOPT_RINEX: int = 3
-POSOPT_RTCM: int = 4
-POSOPT_SINGLE: int = 1
+POSOPT_FILE: int = 3
+POSOPT_POS_LLH: int = 0
+POSOPT_POS_XYZ: int = 1
+POSOPT_RINEX: int = 4
+POSOPT_RTCM: int = 5
+POSOPT_SINGLE: int = 2
 R2D: float = 57.29577951308232
 RE_WGS84: float = 6378137.0
 RNX2VER: float = 2.1
 RNX3VER: float = 3.0
+RNX_NUMSYS: int = 7
+RNX_SYS_CMP: int = 5
+RNX_SYS_GAL: int = 2
+RNX_SYS_GLO: int = 1
+RNX_SYS_GPS: int = 0
+RNX_SYS_IRN: int = 6
+RNX_SYS_QZS: int = 3
+RNX_SYS_SBS: int = 4
 SBSOPT_FCORR: int = 2
 SBSOPT_ICORR: int = 4
 SBSOPT_LCORR: int = 1
 SBSOPT_RANGE: int = 8
 SC2RAD: float = 3.1415926535898
-SNR_UNIT: float = 0.001
 SOLF_ENU: int = 2
 SOLF_GSIF: int = 5
 SOLF_LLH: int = 0
@@ -6334,24 +6400,23 @@ SOLTYPE_COMBINED: int = 2
 SOLTYPE_COMBINED_NORESET: int = 3
 SOLTYPE_FORWARD: int = 0
 STRFMT_BINEX: int = 10
-STRFMT_CNAV: int = 3
 STRFMT_CRES: int = 6
 STRFMT_JAVAD: int = 8
-STRFMT_NMEA: int = 18
+STRFMT_NMEA: int = 19
 STRFMT_NVS: int = 9
 STRFMT_OEM4: int = 2
-STRFMT_RINEX: int = 14
-STRFMT_RNXCLK: int = 16
+STRFMT_RINEX: int = 15
+STRFMT_RNXCLK: int = 17
 STRFMT_RT17: int = 11
 STRFMT_RTCM2: int = 0
 STRFMT_RTCM3: int = 1
-STRFMT_SBAS: int = 17
+STRFMT_SBAS: int = 18
 STRFMT_SBP: int = 5
 STRFMT_SEPT: int = 12
-STRFMT_SP3: int = 15
+STRFMT_SP3: int = 16
 STRFMT_STQ: int = 7
-STRFMT_TERSUS: int = 13
 STRFMT_UBX: int = 4
+STRFMT_UNICORE: int = 14
 STR_FILE: int = 2
 STR_FTP: int = 7
 STR_HTTP: int = 8
@@ -6393,11 +6458,11 @@ TSYS_GPS: int = 0
 TSYS_IRN: int = 6
 TSYS_QZS: int = 4
 TSYS_UTC: int = 1
-VER_RTKLIB: str = 'demo5'
-chisqr: Arr1Ddouble  # value = <pyrtklib5.Arr1Ddouble object>
-formatstrs: Arr2Dchar  # value = <pyrtklib5.Arr2Dchar object>
-igpband1: Arr2Dsbsigpband_t  # value = <pyrtklib5.Arr2Dsbsigpband_t object>
-igpband2: Arr2Dsbsigpband_t  # value = <pyrtklib5.Arr2Dsbsigpband_t object>
-prcopt_default: prcopt_t  # value = <pyrtklib5.prcopt_t object>
-solopt_default: solopt_t  # value = <pyrtklib5.solopt_t object>
-sysopts: Arr1Dopt_t  # value = <pyrtklib5.Arr1Dopt_t object>
+VER_RTKLIB: str = 'EX'
+chisqr: Arr1Ddouble  # value = <pyrtklib5.pyrtklib5.Arr1Ddouble object>
+formatstrs: Arr2Dchar  # value = <pyrtklib5.pyrtklib5.Arr2Dchar object>
+igpband1: Arr2Dsbsigpband_t  # value = <pyrtklib5.pyrtklib5.Arr2Dsbsigpband_t object>
+igpband2: Arr2Dsbsigpband_t  # value = <pyrtklib5.pyrtklib5.Arr2Dsbsigpband_t object>
+prcopt_default: prcopt_t  # value = <pyrtklib5.pyrtklib5.prcopt_t object>
+solopt_default: solopt_t  # value = <pyrtklib5.pyrtklib5.solopt_t object>
+sysopts: Arr1Dopt_t  # value = <pyrtklib5.pyrtklib5.Arr1Dopt_t object>

@@ -21,6 +21,7 @@
 *           2020/07/10 1.8  suppress warnings
 *           2020/11/30 1.9  use integer type in stdint.h
 *-----------------------------------------------------------------------------*/
+#define _POSIX_C_SOURCE 200809L
 #include "rtklib.h"
 
 #define NVSSYNC     0x10        /* nvs message sync code 1 */
@@ -72,7 +73,7 @@ static int decode_xf5raw(raw_t *raw)
     uint8_t rcvTimeScaleCorr, sys, carrNo;
     int i,j,prn,sat,n=0,nsat,week;
     uint8_t *p=raw->buff+2;
-    char *q,tstr[32],flag;
+    char *q,tstr[40],flag;
     
     trace(4,"decode_xf5raw: len=%d\n",raw->len);
     
@@ -144,7 +145,7 @@ static int decode_xf5raw(raw_t *raw)
                   sat,L1,P1,D1);
             continue;
         }
-        raw->obs.data[n].SNR[0]=(uint16_t)(I1(p+3)/SNR_UNIT+0.5);
+        raw->obs.data[n].SNR[0]=I1(p+3);
         if (sys==SYS_GLO) {
             raw->obs.data[n].L[0]  =  L1 - toff*(FREQ1_GLO+DFRQ1_GLO*carrNo);
         } else {
@@ -163,8 +164,8 @@ static int decode_xf5raw(raw_t *raw)
         
         for (j=1;j<NFREQ+NEXOBS;j++) {
             raw->obs.data[n].L[j]=raw->obs.data[n].P[j]=0.0;
-            raw->obs.data[n].D[j]=0.0;
-            raw->obs.data[n].SNR[j]=raw->obs.data[n].LLI[j]=0;
+            raw->obs.data[n].D[j]=raw->obs.data[n].SNR[j]=0.0;
+            raw->obs.data[n].LLI[j]=0;
             raw->obs.data[n].code[j]=CODE_NONE;
         }
         n++;
@@ -567,7 +568,8 @@ extern int gen_nvs(const char *msg, uint8_t *buff)
     trace(4,"gen_nvs: msg=%s\n",msg);
     
     strcpy(mbuff,msg);
-    for (p=strtok(mbuff," ");p&&narg<32;p=strtok(NULL," ")) {
+    char *r;
+    for (p=strtok_r(mbuff," ",&r);p&&narg<32;p=strtok_r(NULL," ",&r)) {
         args[narg++]=p;
     }
     if (narg<1) {
