@@ -3,7 +3,7 @@
 ## News
 
 ### 2025.10.02
-We roughly adapt our binding to [rtklib_demo5 2.5.0 EX](https://github.com/rtklibexplorer/RTKLIB). But it's not fully tested. Please kindly report issue when you have trouble. And we have a more pythonic frontend called [TASGNSS](https://github.com/PolyU-TASLAB/TASGNSS). Feel free to have try.
+We roughly adapt our binding to [rtklib_demo5 2.5.0 EX](https://github.com/rtklibexplorer/RTKLIB). But it's not fully tested. Please kindly report issue when you have trouble. And we have a more pythonic frontend called [TASGNSS](https://github.com/PolyU-TASLAB/TASGNSS). Feel free to have try. 
 
 Our paper has been successfully published in *IEEE Transactions on Intelligent Transportation Systems*! If you find our tool useful, please cite our paper, thanks so much!
 ```latex
@@ -19,6 +19,18 @@ Our paper has been successfully published in *IEEE Transactions on Intelligent T
   doi={10.1109/TITS.2025.3552691}}
 ```
 
+Note that Python 3.6 and 3.7 are no longer supported, while Python 3.12 and 3.13 are now officially supported.
+
+| Python | Linux(After 2010) | Macos Sonoma(M1) | Macos Ventura(Intel)| Windows |
+| :----: | :----: | :----: | :----: | :----: |
+| 3.6 | &#x274C; | &#x274C; | &#x274C; |  &#x274C; |
+| 3.7 | &#x274C; | &#x274C; | &#x274C; |  &#x274C; |
+| 3.8 | &#x2705; | &#x2705; | &#x2705; |  &#x2705; |
+| 3.9 | &#x2705; | &#x2705; | &#x2705; |  &#x2705; |
+| 3.10 | &#x2705; | &#x2705; | &#x2705; | &#x2705; |
+| 3.11 | &#x2705; | &#x2705; | &#x2705; | &#x2705; |
+| 3.12 | &#x2705; | &#x2705; | &#x2705; | &#x2705; |
+| 3.13 | &#x2705; | &#x2705; | &#x2705; | &#x2705; |
 
 ### 2024.10.25
 
