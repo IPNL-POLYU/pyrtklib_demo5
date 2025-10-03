@@ -49,6 +49,7 @@ class BuildExt(build_ext):
                 "-DCMAKE_C_FLAGS_RELEASE=/MT",
                 "-DCMAKE_CXX_FLAGS_RELEASE=/MT",
                 "-DWIN32=ON",
+                "-DWIN_DLL=ON",
                 "-DCMAKE_CXX_FLAGS=/bigobj /DWIN32",  # 添加 /bigobj 和 /DWIN32 选项
                 "-DCMAKE_C_FLAGS=/bigobj /DWIN32",  # 添加 /bigobj 和 /DWIN32 选项
                 "-DCMAKE_EXE_LINKER_FLAGS=/bigobj",  # 添加 /bigobj 选项
