@@ -105,7 +105,7 @@ jobs:
     - name: Upload distributions
       uses: actions/upload-artifact@v4
       with:
-        name: python-wheels
+        name: python-wheels-${{ matrix.python-version }}-${{ runner.os }}
         path: wheelhouse/*.whl
         overwrite: true
 
