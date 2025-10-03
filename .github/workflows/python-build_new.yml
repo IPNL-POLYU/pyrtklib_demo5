@@ -100,12 +100,12 @@ jobs:
         run: cibuildwheel --output-dir wheelhouse
         env:
           CIBW_BUILD: ${{ matrix.cibw-build }}
-      - name: Upload individual wheel artifact (for collection later)
+      - name: Upload individual wheel artifact
         uses: actions/upload-artifact@v4
         with:
-          name: wheel-${{ matrix.python-version }}-${{ runner.os }}
+          name: wheel-py${{ matrix.python-version }}-${{ matrix.os }}-${{ matrix.cibw-build }}
           path: wheelhouse/*.whl
-          # 不再命名为 python-wheels-X-Y，避免与最终 artifact 冲突
+
 
   # ✅ 新增 job：收集所有 wheels 并打包
   package-wheels:
